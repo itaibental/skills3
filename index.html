@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגול מיומנויות - ניהול מתקדם</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS לייבוא אקסל -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col text-right">
+
+    <!-- Landing Screen -->
+    <div id="landingScreen" class="flex-grow flex flex-col items-center justify-center p-6 text-center">
+        <h1 class="text-6xl font-black mb-4 italic tracking-tight text-white text-center">
+            תרגול <span class="accent-orange">מיומנויות</span>
+        </h1>
+        <p class="text-xl text-blue-300 mb-12 font-light">ניהול סביבת למידה משולבת</p>
+        
+        <div class="grid md:grid-cols-2 gap-8 w-full max-w-2xl mx-auto text-right">
+            <div onclick="window.openLoginModal('student')" class="glass p-8 rounded-3xl cursor-pointer hover:border-orange-500 transition border-2 border-transparent group">
+                <div class="text-5xl mb-4 group-hover:scale-110 transition text-center">🎓</div>
+                <h2 class="text-2xl font-bold mb-2 text-white text-center">כניסת תלמידים</h2>
+                <p class="text-gray-400 text-sm text-center">ביצוע משימות וצפייה במשוב</p>
+            </div>
+            <div onclick="window.openLoginModal('teacher')" class="glass p-8 rounded-3xl cursor-pointer hover:border-blue-500 transition border-2 border-transparent group">
+                <div class="text-5xl mb-4 group-hover:scale-110 transition text-center">🔑</div>
+                <h2 class="text-2xl font-bold mb-2 text-white text-center">כניסת מורים</h2>
+                <p class="text-gray-400 text-sm text-center">ניהול כיתות, אקסל והתחברות מהירה</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Login Modal -->
+    <div id="studentLoginModal" class="modal-overlay hidden">
+        <div class="glass p-10 rounded-3xl w-full max-w-md border-2 border-orange-500 shadow-2xl relative">
+            <button onclick="window.closeLoginModals()" class="absolute top-4 left-4 text-gray-400 hover:text-white text-2xl">✕</button>
+            <h2 class="text-3xl font-black mb-6 text-orange-500">אימות תלמיד</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2 font-bold">מספר תעודת זהות:</label>
+                    <input type="text" id="studentTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-4 text-white focus:border-orange-500 outline-none text-center text-xl tracking-widest" placeholder="000000000">
+                </div>
+                <button onclick="window.loginStudent()" class="btn-primary w-full text-lg mt-4 font-black">התחל בעבודה</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Login Modal -->
+    <div id="teacherLoginModal" class="modal-overlay hidden">
+        <div class="glass p-10 rounded-3xl w-full max-w-md border-2 border-blue-500 shadow-2xl relative overflow-hidden">
+            <button onclick="window.closeLoginModals()" class="absolute top-4 left-4 text-gray-400 hover:text-white text-2xl z-10">✕</button>
+            
+            <div id="teacherGate" class="space-y-4">
+                <h2 class="text-3xl font-black mb-6 text-blue-500">אזור מורים מוגן</h2>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2 font-bold text-right">סיסמת גישה לצוות (1234):</label>
+                    <div class="relative">
+                        <input type="password" id="globalTeacherPass" class="w-full bg-black/40 border border-slate-700 rounded-xl p-4 text-white focus:border-blue-500 outline-none text-center text-xl tracking-widest">
+                        <button type="button" onclick="window.togglePass('globalTeacherPass')" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">👁️</button>
+                    </div>
+                </div>
+                <button onclick="window.checkTeacherGate()" class="btn-secondary w-full text-lg mt-4 font-black">אימות גישה</button>
+            </div>
+
+            <div id="teacherAuthFields" class="hidden space-y-4">
+                <div class="flex border-b border-slate-700 mb-6">
+                    <button id="tabLogin" onclick="window.switchTeacherMode('login')" class="flex-1 py-3 text-white font-bold border-b-2 border-blue-500 transition">כניסה</button>
+                    <button id="tabSignup" onclick="window.switchTeacherMode('signup')" class="flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition">רישום חדש</button>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- התחברות מהירה לפי בית ספר -->
+                    <div id="schoolSelectArea">
+                        <label class="block text-xs text-blue-400 font-bold mb-1">בחר בית ספר להתחברות מהירה:</label>
+                        <select id="loginSchoolList" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none mb-2">
+                            <option value="">-- טוען רשימת בתי ספר... --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">שם משתמש:</label>
+                        <input type="text" id="teacherUser" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none" placeholder="הזן שם משתמש">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">סיסמה אישית:</label>
+                        <div class="relative">
+                            <input type="password" id="teacherPass" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none pl-10" placeholder="סיסמה">
+                            <button type="button" onclick="window.togglePass('teacherPass')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">👁️</button>
+                        </div>
+                    </div>
+                    
+                    <div id="newTeacherFields" class="hidden space-y-3 pt-4 border-t border-slate-700">
+                        <input type="text" id="schoolName" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="שם בית הספר (חובה)">
+                        <input type="text" id="deptHead" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="שם רכז המגמה (חובה)">
+                    </div>
+                </div>
+                
+                <button id="mainTeacherBtn" onclick="window.loginTeacher()" class="btn-secondary w-full text-lg mt-4 font-black">כניסה למערכת</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Dashboard -->
+    <div id="teacherDashboard" class="hidden-section p-4 md:p-12 text-right">
+        <header class="max-w-6xl mx-auto flex justify-between items-center mb-8 border-b border-gray-800 pb-6">
+            <div>
+                <h1 class="text-4xl font-black text-blue-500">לוח בקרה למורה</h1>
+                <p id="teacherProfileInfo" class="text-gray-500 text-sm font-bold"></p>
+            </div>
+            <button onclick="location.reload()" class="text-sm text-gray-500 underline hover:text-white transition">התנתק</button>
+        </header>
+
+        <div class="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
+            <!-- Sidebar: Class Management -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="glass p-6 rounded-3xl border-blue-500/30 border">
+                    <h3 class="text-xl font-bold mb-4 text-white">1. בחירת כיתה</h3>
+                    <select id="activeClassSelector" onchange="window.loadTeacherRoster()" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white mb-4">
+                        <option value="all">כל התלמידים</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <input type="text" id="newClassNameInput" class="flex-grow bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-sm" placeholder="שם כיתה חדשה">
+                        <button onclick="window.addNewClass()" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-bold">+</button>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-3xl border-green-500/30 border">
+                    <h3 class="text-xl font-bold mb-4 text-white">2. ייבוא תלמידים</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 border-2 border-dashed border-slate-700 rounded-2xl text-center">
+                            <label class="block text-xs text-gray-400 mb-2">ייבוא מאקסל (עמודות: שם, ת"ז)</label>
+                            <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
+                            <button onclick="document.getElementById('excelInput').click()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs hover:bg-slate-700 transition">בחר קובץ 📁</button>
+                        </div>
+                        <div class="text-center">או הזנה ידנית:</div>
+                        <textarea id="studentIdsList" class="w-full h-32 bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-xs" placeholder="שם, תעודת זהות (אחד בשורה)"></textarea>
+                        <button onclick="window.saveRoster()" class="btn-primary w-full text-sm font-black">עדכן רשימת כיתה</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main: Students List -->
+            <div class="lg:col-span-2 glass p-6 rounded-3xl min-h-[400px]">
+                <h3 class="text-xl font-bold mb-6 flex justify-between items-center text-white">
+                    תלמידים רשומים
+                    <span id="rosterCount" class="text-sm bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full font-mono">0</span>
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-gray-500">
+                                <th class="p-3">שם התלמיד</th>
+                                <th class="p-3">תעודת זהות</th>
+                                <th class="p-3">כיתה</th>
+                                <th class="p-3 text-center">פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rosterTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- (Modals for Work and View remain the same from previous version) -->
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <!-- Student Edit Modal Content -->
+    </div>
+    <div id="teacherViewModal" class="modal-overlay hidden">
+        <!-- Teacher View Modal Content -->
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
