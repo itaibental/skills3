@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פורטל תלמידים - תרגול מיומנויות</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen bg-[#0f172a] text-white font-['Assistant'] flex flex-col">
+
+    <!-- Login Screen -->
+    <div id="studentLoginArea" class="flex-grow flex items-center justify-center p-6">
+        <div class="glass p-10 rounded-3xl w-full max-w-md border-2 border-orange-500 shadow-2xl text-right">
+            <div class="text-center mb-8">
+                <div class="text-6xl mb-4">🎓</div>
+                <h1 class="text-3xl font-black text-orange-500">כניסת תלמידים</h1>
+                <p class="text-gray-400">הזן תעודת זהות כדי להתחיל</p>
+            </div>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2 font-bold">מספר תעודת זהות:</label>
+                    <input type="text" id="studentTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-4 text-white focus:border-orange-500 outline-none text-center text-xl tracking-widest" placeholder="000000000">
+                </div>
+                <button onclick="window.loginStudent()" id="loginBtn" class="btn-primary w-full text-lg font-black py-4">התחברות למערכת</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Student Workspace (Hidden by default) -->
+    <div id="studentWorkspace" class="hidden flex-col flex-grow">
+        <header class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+            <div class="text-right">
+                <h2 id="welcomeStudent" class="text-2xl font-black text-white">שלום, תלמיד</h2>
+                <p id="studentClassInfo" class="text-blue-400 text-sm font-bold"></p>
+            </div>
+            <button onclick="location.reload()" class="bg-slate-800 hover:bg-red-900/50 text-white px-4 py-2 rounded-xl text-xs transition">התנתק</button>
+        </header>
+
+        <main class="p-6 md:p-12 max-w-6xl mx-auto w-full">
+            <div id="studentFeedbackBox" class="mb-10 hidden animate-bounce">
+                <div class="bg-blue-900/30 border-2 border-blue-500 p-6 rounded-2xl flex items-start gap-4">
+                    <span class="text-3xl">💬</span>
+                    <div class="text-right">
+                        <h4 class="text-blue-400 font-black mb-1">משוב חדש מהמורה:</h4>
+                        <p id="feedbackText" class="text-white text-lg italic"></p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-2xl font-black mb-6 border-r-4 border-orange-500 pr-4">המטלות שלי</h3>
+            <div id="skillsTasksContainer" class="grid md:grid-cols-2 gap-6">
+                <!-- Tasks will be injected here from GitHub skills folder -->
+                <div class="col-span-full text-center p-12 text-gray-500">
+                    טוען מטלות מהשרת...
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Task Execution Modal (Full Screen) -->
+    <div id="taskIframeModal" class="fixed inset-0 z-[100] bg-black hidden flex-col">
+        <div class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+            <h3 id="currentTaskTitle" class="font-bold text-orange-500">שם המטלה</h3>
+            <button onclick="window.closeTaskModal()" class="text-gray-400 hover:text-white text-xl p-2">סגור וחזור לרשימה ✕</button>
+        </div>
+        <div class="flex-grow relative">
+            <iframe id="taskIframe" class="w-full h-full border-none bg-white" src=""></iframe>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
