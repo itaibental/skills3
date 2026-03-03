@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערך שיעור משולב: צילום ראיון עיתונאי</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #0f172a;
+            color: #f3f4f6;
+            scroll-behavior: smooth;
+        }
+        .accent-orange { color: #f97316; }
+        .bg-accent-orange { background-color: #f97316; }
+        .border-orange { border-color: #f97316; }
+        
+        .step-card {
+            background: #1e293b;
+            border-radius: 1.5rem;
+            border: 1px solid #334155;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .step-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        
+        .step-header {
+            background: linear-gradient(90deg, #1e3a8a, #1e293b);
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            border-radius: 1.5rem 1.5rem 0 0;
+            border-bottom: 2px solid #f97316;
+        }
+
+        .step-number {
+            background: #f97316;
+            color: #000;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.25rem;
+            margin-left: 1rem;
+            flex-shrink: 0;
+        }
+
+        .workspace-btn {
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid #f97316;
+            color: #f97316;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.75rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .workspace-btn:hover {
+            background: #f97316;
+            color: #000;
+        }
+
+        /* Modal Blur */
+        #modalOverlay {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(8px);
+        }
+
+        .content-box {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .assignment-box {
+            background: rgba(249, 115, 22, 0.05);
+            border: 1px dashed rgba(249, 115, 22, 0.3);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #f97316;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #submitSuccessModal {
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-12">
+
+    <!-- Hero Section -->
+    <header class="max-w-5xl mx-auto text-center mb-16 border-b border-gray-800 pb-12">
+        <h1 class="text-5xl md:text-7xl font-black mb-4 italic tracking-tight">
+            <span class="text-white">צילום</span> <span class="accent-orange">ראיון</span>
+        </h1>
+        <p class="text-xl text-blue-300 font-light">מדריך אינטראקטיבי: מהתכנון ועד לחדר העריכה</p>
+    </header>
+
+    <main class="max-w-5xl mx-auto space-y-12 pb-20">
+
+        <!-- Intro Section -->
+        <section class="bg-blue-900/10 border-r-4 border-blue-500 p-8 rounded-xl mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                מבוא קונספטואלי
+            </h2>
+            <p class="text-gray-300 leading-relaxed">ראיון עיתונאי מוצלח מתחיל בחיבור אנושי. התפקיד שלכם כצלמים הוא לייצר סביבה נוחה שבה המרואיין שוכח מהמצלמה. <strong>זכרו:</strong> המצלמה היא רק כלי להעברת הרגש והמידע.</p>
+        </section>
+
+        <!-- TEAM SECTION -->
+        <section class="step-card border-blue-500/50">
+            <div class="step-header" style="background: linear-gradient(90deg, #1e4ed8, #1e293b);">
+                <div class="step-number" style="background: #3b82f6;">👥</div>
+                <h2 class="text-xl font-bold">צוות ההפקה</h2>
+            </div>
+            <div class="p-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-blue-400 mb-2">תפקידי הצוות:</h4>
+                        <div class="flex flex-wrap gap-2 text-[11px]">
+                            <span class="bg-slate-800 px-2 py-1 rounded">🎬 בימאי</span>
+                            <span class="bg-slate-800 px-2 py-1 rounded">📋 מפיק</span>
+                            <span class="bg-slate-800 px-2 py-1 rounded">🎥 צלם</span>
+                            <span class="bg-slate-800 px-2 py-1 rounded">🎧 מקליט</span>
+                            <span class="bg-slate-800 px-2 py-1 rounded">✂️ עורך</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal(0, 'צוות ההפקה')" class="workspace-btn flex items-center gap-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white">
+                             הגדרת חברי הצוות ✍️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 1 -->
+        <section class="step-card">
+            <div class="step-header">
+                <div class="step-number">01</div>
+                <h2 class="text-xl font-bold">תכנון, קונספט ולוקיישן</h2>
+            </div>
+            <div class="p-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold accent-orange mb-2">עקרונות המפתח:</h4>
+                        <ul class="text-sm space-y-2 text-gray-400">
+                            <li>● <strong>עומק:</strong> אל תצמידו את המרואיין לקיר.</li>
+                            <li>● <strong>שקט:</strong> בדקו רעשי רקע לפני הצילום.</li>
+                            <li>● <strong>קשר עין:</strong> המרואיין מביט במראיין.</li>
+                        </ul>
+                    </div>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal(1, 'תכנון קונספט ולוקיישן')" class="workspace-btn flex items-center gap-2">
+                             למרחב התכנון שלי ✍️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUESTIONS SECTION -->
+        <section class="step-card border-orange-500/30">
+            <div class="step-header" style="background: linear-gradient(90deg, #1e293b, #431407);">
+                <div class="step-number" style="background: #ea580c;">📝</div>
+                <h2 class="text-xl font-bold">כתיבת שאלות לראיון</h2>
+            </div>
+            <div class="p-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold accent-orange mb-2">איך כותבים שאלות נכונות?</h4>
+                        <ul class="text-sm space-y-2 text-gray-400">
+                            <li>● <strong>שאלות פתוחות:</strong> "למה", "איך", "ספר לי על...".</li>
+                            <li>● <strong>הימנעו מכן/לא:</strong> שאלות סגורות קוטעות את זרימת הראיון.</li>
+                        </ul>
+                    </div>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal('questions', 'כתיבת שאלות למרואיין')" class="workspace-btn flex items-center gap-2">
+                             הכנת רשימת שאלות ✍️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2 -->
+        <section class="step-card">
+            <div class="step-header">
+                <div class="step-number">02</div>
+                <h2 class="text-xl font-bold">מערך מצלמות וסמארטפונים</h2>
+            </div>
+            <div class="p-8">
+                <div class="grid md:grid-cols-2 gap-8 mb-6">
+                    <div>
+                        <div class="bg-black/30 p-4 rounded-lg border border-gray-700 mb-4 text-xs">
+                            <h4 class="text-blue-400 font-bold mb-2">צילום ב-2 מצלמות:</h4>
+                            <p class="text-gray-400">מצלמה א' (Medium) ומצלמה ב' (Tight).</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal(2, 'מערך מצלמות וזוויות')" class="workspace-btn">פתח מרחב תכנון מצלמות</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 3 -->
+        <section class="step-card">
+            <div class="step-header">
+                <div class="step-number">03</div>
+                <h2 class="text-xl font-bold">תאורה וסאונד מקצועי</h2>
+            </div>
+            <div class="p-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold accent-orange mb-2 text-sm">מערך טכני:</h4>
+                        <p class="text-xs text-gray-400 mb-2">תאורת 3 מוקדים ומיקרופון דש/בום.</p>
+                    </div>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal(3, 'תכנון סאונד ותאורה')" class="workspace-btn">תכנון תאורה וסאונד</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 4 -->
+        <section class="step-card">
+            <div class="step-header">
+                <div class="step-number">04</div>
+                <h2 class="text-xl font-bold">הפקה וצילומי השלמה (B-Roll)</h2>
+            </div>
+            <div class="p-8">
+                <p class="text-sm italic text-gray-400 mb-4">"הראו לי על מה הוא מדבר."</p>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                        <div class="content-box">מחוות ידיים</div>
+                        <div class="content-box">אובייקטים רלוונטיים</div>
+                    </div>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal(4, 'רשימת B-Roll')" class="workspace-btn">הכנת רשימת צילומי השלמה</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 5 -->
+        <section class="step-card">
+            <div class="step-header">
+                <div class="step-number">05</div>
+                <h2 class="text-xl font-bold">עריכה ובניית הסיפור</h2>
+            </div>
+            <div class="p-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <p class="text-sm text-gray-300">הסתרת "קפיצות" (Jump Cuts) ובניית נרטיב.</p>
+                    <div class="flex flex-col justify-center items-center md:items-end">
+                        <button onclick="openModal(5, 'תכנון עריכה')" class="workspace-btn">תכנון מבנה העריכה</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Submit Button -->
+        <section class="pt-12 text-center">
+            <button onclick="finalSubmit()" id="finalSubmitBtn" class="bg-white text-black font-black py-5 px-16 rounded-2xl text-xl hover:bg-accent-orange hover:text-white transform hover:scale-105 transition-all shadow-2xl">
+                🚀 הגשת המטלה לסיכום
+            </button>
+            <p class="text-gray-500 mt-4 text-sm italic">לחץ כאן לאחר שסיימת את כל שלבי התכנון במערך.</p>
+        </section>
+
+    </main>
+
+    <!-- Modal Workspace -->
+    <div id="modalOverlay" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#1e293b] w-full max-w-2xl rounded-3xl border-2 border-orange-500 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden" id="modalContainer">
+            <div class="p-6 bg-slate-900/50 flex justify-between items-center border-b border-slate-700">
+                <div>
+                    <span id="modalStepNum" class="text-orange-500 font-bold text-xs uppercase tracking-widest">שלב X</span>
+                    <h3 id="modalTitle" class="text-2xl font-black text-white">כותרת השלב</h3>
+                </div>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white text-3xl transition">✕</button>
+            </div>
+            
+            <div class="p-8 flex flex-col flex-grow overflow-y-auto">
+                <!-- Inner Assignment Box Inside Modal -->
+                <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 mb-6">
+                    <h5 class="text-blue-400 font-bold text-sm mb-2 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        משימה לביצוע:
+                    </h5>
+                    <p id="modalAssignmentText" class="text-sm text-gray-300 leading-relaxed italic">הנחיות יופיעו כאן...</p>
+                </div>
+
+                <label id="modalLabel" class="text-gray-400 text-xs mb-2 font-bold uppercase tracking-wider">הזן את התכנון שלך:</label>
+                <textarea id="planInput" class="flex-grow w-full bg-black/40 border border-slate-700 rounded-2xl p-6 text-white focus:outline-none focus:border-orange-500 resize-none mb-6 text-lg leading-relaxed shadow-inner" placeholder="התחל לכתוב כאן..."></textarea>
+                
+                <div class="flex flex-wrap gap-4 justify-between items-center">
+                    <div class="flex gap-4">
+                        <button id="saveBtn" onclick="saveToCloud()" class="bg-accent-orange text-black font-black py-3 px-8 rounded-xl hover:scale-105 active:scale-95 transition shadow-lg shadow-orange-500/20">שמור בענן</button>
+                        <button onclick="exportToDoc()" class="bg-slate-700 text-white font-bold py-3 px-8 rounded-xl hover:bg-slate-600 transition">ייצוא ל-Doc</button>
+                    </div>
+                    <div id="statusMsg" class="text-sm text-green-400 opacity-0 transition-opacity flex items-center gap-2">
+                        <div class="loader" id="saveLoader" style="display:none"></div>
+                        <span id="statusText">נשמר בהצלחה</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="submitSuccessOverlay" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/90">
+        <div class="bg-slate-900 border-2 border-green-500 p-12 rounded-3xl text-center max-w-md">
+            <div class="text-6xl mb-6">🎉</div>
+            <h2 class="text-3xl font-black mb-4 text-white">המטלה הוגשה!</h2>
+            <p class="text-gray-400 mb-8 leading-relaxed">כל הכבוד! תיק ההפקה שלך נשמר במלואו במערכת. המורה יקבל את התכנים שלך בקרוב.</p>
+            <button onclick="closeSuccess()" class="bg-green-600 text-white font-bold py-3 px-10 rounded-xl hover:bg-green-500 transition">חזרה למערך</button>
+        </div>
+    </div>
+
+    <!-- Firebase System -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCte4D5lS6eHAZbNvcKHY0I07yr2llh-HI",
+            authDomain: "webpages-4aacb.firebaseapp.com",
+            projectId: "webpages-4aacb",
+            storageBucket: "webpages-4aacb.firebasestorage.app",
+            messagingSenderId: "421209892208",
+            appId: "1:421209892208:web:53e3ac2d7976975f579bb5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'webpages-4aacb-lesson';
+        
+        let currentUser = null;
+        let isAuthReady = false;
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try { await signInWithCustomToken(auth, __initial_auth_token); } 
+                    catch (e) { await signInAnonymously(auth); }
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) { console.error("Auth failed:", error); }
+            finally { isAuthReady = true; }
+        };
+
+        onAuthStateChanged(auth, (user) => { currentUser = user; isAuthReady = true; });
+        initAuth();
+
+        // Assignment Data Lookup
+        const assignments = {
+            0: "רשמו את שמות חברי הצוות שלכם ליד כל תפקיד (בימאי, מפיק, צלם, מקליט, עורך). אם אתם עובדים לבד, ציינו מי ממלא איזה תפקיד בכל שלב.",
+            1: "הגדירו את נושא הראיון שלכם, תארו את הלוקיישן שבחרתם והסבירו מדוע הוא מתאים ויזואלית לסיפור המרואיין.",
+            "questions": "נסחו לפחות 5 שאלות פתוחות. ודאו שהן מתחילות ב'למה', 'איך' או 'ספר לי על' ומובילות לתשובות סיפוריות.",
+            2: "פרטו את הציוד שתשתמשו בו (מצלמה מקצועית/סמארטפון). תארו את זוויות הצילום המתוכננות לכל מכשיר (Medium/Tight).",
+            3: "תארו את מערך התאורה (באילו פנסים תשתמשו ומאיפה יאירו?) ואת סוג המיקרופון ואופן חיבורו למכשיר ההקלטה.",
+            4: "צרו רשימת שוטים (Shot List) לויזואלים שתצלמו (B-Roll) כדי להעשיר את הכתבה ולהסתיר חיתוכי עריכה עתידיים.",
+            5: "תארו את המבנה המתוכנן של הסרטון (פתיח, גוף הראיון, סיום) וציינו באילו נקודות תשלבו את הויזואלים שצילמתם."
+        };
+
+        window.openModal = async (step, title) => {
+            window.activeStep = step;
+            const modalContainer = document.getElementById('modalContainer');
+            const modalLabel = document.getElementById('modalLabel');
+            const modalStepNum = document.getElementById('modalStepNum');
+            const assignText = document.getElementById('modalAssignmentText');
+            
+            // Set Assignment Text inside Modal
+            assignText.innerText = assignments[step] || "אנא מלא את פרטי השלב.";
+
+            if (step === 0) {
+                modalContainer.style.borderColor = '#3b82f6';
+                modalStepNum.innerText = `הפקה`;
+                modalLabel.innerText = `רשימת חברי הצוות:`;
+            } else if (step === 'questions') {
+                modalContainer.style.borderColor = '#ea580c';
+                modalStepNum.innerText = `תוכן`;
+                modalLabel.innerText = `רשימת השאלות:`;
+            } else {
+                modalContainer.style.borderColor = '#f97316';
+                modalStepNum.innerText = `שלב ${step}`;
+                modalLabel.innerText = `תכנון השלב:`;
+            }
+            
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalOverlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            
+            const inputField = document.getElementById('planInput');
+            inputField.value = "טוען נתונים...";
+            inputField.disabled = true;
+            
+            if (!isAuthReady) await new Promise(r => setTimeout(r, 500));
+
+            if (currentUser) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'project_plans', `step_${step}`);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        inputField.value = docSnap.data().content;
+                    } else {
+                        if (step === 0) inputField.value = "בימאי: \nמפיק: \nצלם: \nמקליט: \nעורך: ";
+                        else if (step === 'questions') inputField.value = "1. \n2. \n3. \n4. \n5. ";
+                        else inputField.value = "";
+                    }
+                } catch (e) { inputField.value = ""; }
+            }
+            inputField.disabled = false;
+        };
+
+        window.closeModal = () => {
+            document.getElementById('modalOverlay').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            window.activeStep = null;
+        };
+
+        window.saveToCloud = async () => {
+            if (!currentUser || window.activeStep === undefined) return;
+            const content = document.getElementById('planInput').value;
+            const btn = document.getElementById('saveBtn');
+            const status = document.getElementById('statusMsg');
+            const loader = document.getElementById('saveLoader');
+            const statusText = document.getElementById('statusText');
+            
+            btn.disabled = true;
+            loader.style.display = 'inline-block';
+            statusText.innerText = "שומר...";
+            status.classList.remove('opacity-0');
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'project_plans', `step_${window.activeStep}`);
+                await setDoc(docRef, { content, updatedAt: new Date().toISOString(), step: window.activeStep });
+                statusText.innerText = "נשמר בהצלחה ✓";
+                setTimeout(() => status.classList.add('opacity-0'), 2500);
+            } catch (e) { statusText.innerText = "שגיאה בשמירה."; }
+            finally { btn.disabled = false; loader.style.display = 'none'; }
+        };
+
+        window.finalSubmit = async () => {
+            if (!currentUser) return;
+            const btn = document.getElementById('finalSubmitBtn');
+            btn.disabled = true;
+            btn.innerText = "מעבד...";
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'project_plans', 'final_submission');
+                await setDoc(docRef, { submitted: true, submittedAt: new Date().toISOString() });
+                document.getElementById('submitSuccessOverlay').classList.remove('hidden');
+            } catch (e) { alert("חלה שגיאה בהגשה. אנא וודא שאתה מחובר לאינטרנט."); }
+            finally { btn.disabled = false; btn.innerText = "🚀 הגשת המטלה לסיכום"; }
+        };
+
+        window.closeSuccess = () => document.getElementById('submitSuccessOverlay').classList.add('hidden');
+
+        window.exportToDoc = () => {
+            const title = document.getElementById('modalTitle').innerText;
+            const content = document.getElementById('planInput').value;
+            const text = `תיק הפקה: צילום ראיון\nחלק: ${title}\n--------------------------\n\n${content}`;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `תכנון_ראיון_${title.replace(/\s/g, '_')}.doc`;
+            link.click();
+        };
+
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'modalOverlay') closeModal();
+        });
+    </script>
+
+    <footer class="max-w-5xl mx-auto text-center py-16 text-gray-600 border-t border-gray-900 mt-20">
+        <p class="mb-2">מערך שיעור אינטראקטיבי - צילום ועריכה עיתונאית</p>
+        <p class="text-xs italic underline italic">המטלה מנוהלת באמצעות שרת ה-Firebase של הפרויקט.</p>
+    </footer>
+
+</body>
+</html>
