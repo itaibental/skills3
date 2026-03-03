@@ -1,7 +1,7 @@
 /**
  * Skills Practice - Project Logic
- * גרסה 3.6: סנכרון מלא בין הזנת מורה לכניסת תלמיד.
- * כולל: ניהול מורים, ייבוא נתונים מגוון, ורינדור מטלות לתלמיד.
+ * גרסה 3.7: פתרון בעיות חיבור (Auth Ready) ושיפור יציבות האימות.
+ * סנכרון מלא בין הזנת מורה לכניסת תלמיד.
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -23,7 +23,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'skills-practice-v2';
 
-// --- רשימת מטלות ברירת מחדל (תיקיית skills) ---
+// --- רשימת מטלות ברירת מחדל ---
 const availableSkills = [
     { id: 'composition', title: 'תרגול קומפוזיציה וזוויות', file: 'composition.html', icon: '📸' },
     { id: 'lighting', title: 'משימת תאורה מעשית', file: 'lighting.html', icon: '💡' },
@@ -48,6 +48,16 @@ const showMsg = (txt, isError = false) => {
     t.innerText = txt;
     document.body.appendChild(t);
     setTimeout(() => { if(t && t.parentNode) t.parentNode.removeChild(t); }, 4000);
+};
+
+// פונקציה להמתנה לאימות לפני ביצוע פעולה
+const waitForAuth = async () => {
+    if (isAuthReady) return true;
+    for (let i = 0; i < 20; i++) { // המתנה של עד 5 שניות
+        if (isAuthReady) return true;
+        await new Promise(r => setTimeout(r, 250));
+    }
+    return isAuthReady;
 };
 
 const showSection = (id) => {
@@ -121,14 +131,13 @@ window.addFromTable = async () => {
 
     const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
     try {
-        // שמירת המידע בנתיב הגישה של התלמיד
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz), { 
             tz, studentName: name, className: selClass, teacherScopeId: tScope 
         });
         showMsg(`התלמיד ${name} נוסף בהצלחה`);
         nameInput.value = ""; tzInput.value = "";
         window.loadTeacherRoster();
-    } catch(e) { showMsg("שגיאת שמירה", true); }
+    } catch(e) { showMsg("שגיאת שמירה - בדוק הרשאות Firestore", true); }
 };
 
 window.addManualStudent = async () => {
@@ -148,7 +157,7 @@ window.addManualStudent = async () => {
         document.getElementById('manualStudentName').value = "";
         document.getElementById('manualStudentTZ').value = "";
         window.loadTeacherRoster();
-    } catch(e) { showMsg("שגיאה", true); }
+    } catch(e) { showMsg("שגיאה בשמירה", true); }
 };
 
 window.importFromGoogleSheets = async () => {
@@ -181,7 +190,7 @@ window.importFromGoogleSheets = async () => {
     } catch(e) { showMsg("וודא שהגיליון ציבורי", true); }
 };
 
-// --- Teacher UI Logic (Login/Signup) ---
+// --- Teacher UI Logic ---
 
 window.switchTeacherMode = (mode) => {
     teacherMode = mode;
@@ -205,26 +214,46 @@ window.switchTeacherMode = (mode) => {
     }
 };
 
+window.checkTeacherGate = () => {
+    if (document.getElementById('globalTeacherPass').value === "1234") {
+        document.getElementById('teacherGate').classList.add('hidden');
+        document.getElementById('teacherAuthFields').classList.remove('hidden');
+        window.initLoginListeners();
+    } else showMsg("סיסמה שגויה", true);
+};
+
 window.initLoginListeners = () => {
     const schoolInput = document.getElementById('teacherUser');
     schoolInput.onblur = async () => {
         if (teacherMode !== 'login') return;
-        const schoolId = getSafeId(schoolInput.value.trim());
-        if (!schoolId) return;
-        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId));
-        if (snap.exists()) {
-            const names = snap.data().teacherNames || [];
-            const select = document.getElementById('teacherIndexSelect');
-            select.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
-            document.getElementById('teacherLoginSelectContainer').classList.remove('hidden');
-            schoolTeachers = names;
-        }
+        const schoolName = schoolInput.value.trim();
+        if (!schoolName) return;
+        const schoolId = getSafeId(schoolName);
+        try {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId));
+            const teacherSelect = document.getElementById('teacherIndexSelect');
+            if (snap.exists() && teacherSelect) {
+                const names = snap.data().teacherNames || [];
+                teacherSelect.innerHTML = '<option value="">-- בחר את שמך --</option>';
+                names.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name; opt.innerText = name;
+                    teacherSelect.appendChild(opt);
+                });
+                document.getElementById('teacherLoginSelectContainer').classList.remove('hidden');
+                schoolTeachers = names;
+            }
+        } catch(e) { console.error("Error fetching school", e); }
     };
 };
 
 window.loginTeacher = async () => {
+    const ready = await waitForAuth();
+    if (!ready) return showMsg("המערכת עדיין מתחברת לשרת, נסה שנית בעוד רגע...", true);
+    
     const schoolName = document.getElementById('teacherUser').value.trim();
     const pass = document.getElementById('teacherPass').value;
+    if (!schoolName || !pass) return showMsg("חסרים פרטים");
     const schoolId = getSafeId(schoolName);
     const schoolRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId);
     
@@ -233,6 +262,7 @@ window.loginTeacher = async () => {
         if (teacherMode === 'login') {
             if (!snap.exists() || snap.data().password !== pass) return showMsg("פרטי גישה שגויים", true);
             activeTeacherName = document.getElementById('teacherIndexSelect').value;
+            if(!activeTeacherName) return showMsg("בחר מורה מהרשימה", true);
             schoolTeachers = snap.data().teacherNames || [];
         } else {
             const names = document.getElementById('teacherNamesInput').value.split('\n').map(n => n.trim()).filter(n => n);
@@ -252,7 +282,7 @@ window.loginTeacher = async () => {
         await window.initTeacherEnvironment();
         window.closeLoginModals();
         showSection('teacherDashboard');
-    } catch (e) { showMsg("שגיאה בהתחברות", true); }
+    } catch (e) { showMsg("שגיאת תקשורת עם השרת", true); }
 };
 
 // --- Base Roster Logic ---
@@ -267,15 +297,14 @@ window.loadTeacherRoster = async () => {
         const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'access_list'));
         table.innerHTML = '';
         
-        // Quick Entry Row in Table
         const inputRow = document.createElement('tr');
         inputRow.className = "bg-blue-900/10 border-b border-blue-500/30";
         inputRow.innerHTML = `
-            <td class="p-2"><input type="text" id="tableInputName" class="w-full bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-xs" placeholder="שם תלמיד"></td>
-            <td class="p-2"><input type="text" id="tableInputTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-xs" placeholder="תעודות זהות"></td>
+            <td class="p-2 text-right"><input type="text" id="tableInputName" class="w-full bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-xs" placeholder="שם תלמיד"></td>
+            <td class="p-2 text-right"><input type="text" id="tableInputTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-xs" placeholder="תעודות זהות"></td>
             <td class="p-2 text-blue-400 font-bold text-xs">${selectedClass === 'all' ? 'בחר כיתה' : selectedClass}</td>
             <td colspan="2" class="p-2 text-center">
-                <button onclick="window.addFromTable()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs font-black hover:bg-blue-500 transition">הוספה מהירה +</button>
+                <button onclick="window.addFromTable()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs font-black hover:bg-blue-500 transition">הוספה +</button>
             </td>
         `;
         table.appendChild(inputRow);
@@ -286,23 +315,19 @@ window.loadTeacherRoster = async () => {
             if (data.teacherScopeId === tScope && (selectedClass === 'all' || data.className === selectedClass)) {
                 count++;
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-800 hover:bg-white/5 transition";
+                tr.className = "border-b border-slate-800 hover:bg-white/5 transition text-right";
                 tr.innerHTML = `
                     <td class="p-4 text-white font-medium">${data.studentName}</td>
                     <td class="p-4 font-mono text-gray-300">${data.tz}</td>
                     <td class="p-4 text-blue-400 font-bold">${data.className}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="window.viewStudentWork('${data.tz}')" class="text-blue-500 font-black hover:underline">פתח תוצרים 👁️</button>
-                    </td>
-                    <td class="p-4 text-center">
-                        <button onclick="window.deleteStudent('${data.tz}')" class="text-red-500 text-xs">מחק 🗑️</button>
-                    </td>
+                    <td class="p-4 text-center"><button onclick="window.viewStudentWork('${data.tz}')" class="text-blue-500 font-black hover:underline">פתח 👁️</button></td>
+                    <td class="p-4 text-center"><button onclick="window.deleteStudent('${data.tz}')" class="text-red-500 text-xs">מחק 🗑️</button></td>
                 `;
                 table.appendChild(tr);
             }
         });
         document.getElementById('rosterCount').innerText = count;
-    } catch(e) { table.innerHTML = '<tr><td colspan="5">שגיאה</td></tr>'; }
+    } catch(e) { table.innerHTML = '<tr><td colspan="5">שגיאת טעינה</td></tr>'; }
 };
 
 window.deleteStudent = async (tz) => {
@@ -327,7 +352,7 @@ window.addNewClass = async () => {
     document.getElementById('newClassNameInput').value = "";
 };
 
-// --- Shared & Modal Helpers ---
+// --- Shared Helpers ---
 
 window.togglePass = (id) => { const el = document.getElementById(id); if(el) el.type = el.type === 'password' ? 'text' : 'password'; };
 window.closeLoginModals = () => { ['studentLoginModal', 'teacherLoginModal'].forEach(id => document.getElementById(id)?.classList.add('hidden')); };
@@ -346,6 +371,9 @@ window.openLoginModal = (type) => {
 };
 
 window.loginStudent = async () => {
+    const ready = await waitForAuth();
+    if (!ready) return showMsg("המערכת עדיין מתחברת לשרת, נסה שנית בעוד רגע...", true);
+
     const tzField = document.getElementById('studentTZ');
     const tz = tzField ? tzField.value.trim() : "";
     if(!tz) return showMsg("נא להזין תעודת זהות", true);
@@ -358,23 +386,36 @@ window.loginStudent = async () => {
             const welcome = document.getElementById('welcomeStudent');
             if(welcome) welcome.innerText = `שלום, ${data.studentName || tz} (${data.className})`;
             
-            // טעינת המטלות הדיגיטליות
             window.renderSkillTasks();
             window.closeLoginModals();
             showSection('studentWorkspace');
         } else {
-            showMsg("תעודת הזהות אינה רשומה במערכת. פנה למורה שלך.", true);
+            showMsg("תעודת הזהות אינה רשומה במערכת. וודא שהמורה הזין אותך.", true);
         }
-    } catch(e) { showMsg("שגיאת אימות", true); }
+    } catch(e) { 
+        console.error(e);
+        showMsg("שגיאת אימות: בדוק חיבור אינטרנט או הגדרות שרת", true); 
+    }
 };
 
 window.closeModal = () => document.getElementById('modalOverlay')?.classList.add('hidden');
 window.closeViewModal = () => document.getElementById('teacherViewModal')?.classList.add('hidden');
 
-// Init Auth
+// --- Auth Initialization ---
+
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    isAuthReady = true;
+});
+
+// אתחול אימות אנונימי מיידי
 (async () => { 
     try {
         await signInAnonymously(auth); 
-        onAuthStateChanged(auth, (user) => { isAuthReady = !!user; });
-    } catch(e) { console.error("Auth failed", e); }
+        // וידוא מיידי של מצב המשתמש
+        if(auth.currentUser) isAuthReady = true;
+    } catch(e) { 
+        console.error("Auth failed", e); 
+        showMsg("כשל בחיבור ל-Firebase. וודא שאימות אנונימי מופעל.", true);
+    }
 })();
