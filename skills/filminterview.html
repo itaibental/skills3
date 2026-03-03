@@ -390,7 +390,7 @@
             2: "פרטו את הציוד שתשתמשו בו (מצלמה מקצועית/סמארטפון). תארו את זוויות הצילום המתוכננות לכל מכשיר (Medium/Tight).",
             3: "תארו את מערך התאורה (באילו פנסים תשתמשו ומאיפה יאירו?) ואת סוג המיקרופון ואופן חיבורו למכשיר ההקלטה.",
             4: "צרו רשימת שוטים (Shot List) לויזואלים שתצלמו (B-Roll) כדי להעשיר את הכתבה ולהסתיר חיתוכי עריכה עתידיים.",
-            5: "תארו את המבנה המתוכנן של הסרטון (פתיח, גוף הראיון, סיום) וציינו באילו נקודות תשלבו את הויזואלים שצילמתם."
+            5: "תארו את הממנה המתוכנן של הסרטון (פתיח, גוף הראיון, סיום) וציינו באילו נקודות תשלבו את הויזואלים שצילמתם."
         };
 
         window.openModal = async (step, title) => {
@@ -400,7 +400,6 @@
             const modalStepNum = document.getElementById('modalStepNum');
             const assignText = document.getElementById('modalAssignmentText');
             
-            // Set Assignment Text inside Modal
             assignText.innerText = assignments[step] || "אנא מלא את פרטי השלב.";
 
             if (step === 0) {
@@ -471,6 +470,20 @@
             finally { btn.disabled = false; loader.style.display = 'none'; }
         };
 
+        /**
+         * פונקציה להגשה למורה (postMessage)
+         * משמשת לתקשורת עם הממשק העוטף (למשל במערכת Skills)
+         */
+        function submitToTeacher() {
+            const myData = { 
+                score: 100, 
+                answers: ["A", "B", "C"],
+                submittedAt: new Date().toISOString(),
+                userId: currentUser ? currentUser.uid : 'anonymous'
+            }; 
+            window.parent.postMessage({ type: 'SUBMIT_TASK', payload: myData }, '*');
+        }
+
         window.finalSubmit = async () => {
             if (!currentUser) return;
             const btn = document.getElementById('finalSubmitBtn');
@@ -478,10 +491,18 @@
             btn.innerText = "מעבד...";
 
             try {
+                // שמירה ב-Firebase
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'project_plans', 'final_submission');
                 await setDoc(docRef, { submitted: true, submittedAt: new Date().toISOString() });
+                
+                // שליחת הודעה לממשק האב (Skills)
+                submitToTeacher();
+
                 document.getElementById('submitSuccessOverlay').classList.remove('hidden');
-            } catch (e) { alert("חלה שגיאה בהגשה. אנא וודא שאתה מחובר לאינטרנט."); }
+            } catch (e) { 
+                console.error(e);
+                alert("חלה שגיאה בהגשה. אנא וודא שאתה מחובר לאינטרנט."); 
+            }
             finally { btn.disabled = false; btn.innerText = "🚀 הגשת המטלה לסיכום"; }
         };
 
@@ -497,11 +518,7 @@
             link.download = `תכנון_ראיון_${title.replace(/\s/g, '_')}.doc`;
             link.click();
         };
-// בתוך קובץ המטלה בתיקיית skills
-function submitToTeacher() {
-    const myData = { score: 100, answers: ["A", "B", "C"] }; // דוגמה לנתונים
-    window.parent.postMessage({ type: 'SUBMIT_TASK', payload: myData }, '*');
-}
+
         document.getElementById('modalOverlay').addEventListener('click', (e) => {
             if (e.target.id === 'modalOverlay') closeModal();
         });
@@ -509,7 +526,7 @@ function submitToTeacher() {
 
     <footer class="max-w-5xl mx-auto text-center py-16 text-gray-600 border-t border-gray-900 mt-20">
         <p class="mb-2">מערך שיעור אינטראקטיבי - צילום ועריכה עיתונאית</p>
-        <p class="text-xs italic underline italic">המטלה מנוהלת באמצעות שרת ה-Firebase של הפרויקט.</p>
+        <p class="text-xs italic underline italic">המטלה מנוהלת באמצעות שרת ה-Firebase של הפרויקט ושולחת עדכונים לממשק האב.</p>
     </footer>
 
 </body>
