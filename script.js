@@ -1,10 +1,10 @@
 /**
  * Skills Practice - Project Logic
- * גרסה 3.1: תמיכה מלאה בריבוי מורים ובידוד סביבות עבודה.
+ * גרסה 3.2: ניהול ריבוי מורים לפי כמות מוגדרת, אזור פרטי לכל מורה, והסרת תצוגת בתי ספר ציבורית.
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Config ---
@@ -24,12 +24,12 @@ const appId = 'skills-practice-v2';
 
 // --- State ---
 let isAuthReady = false;
-let activeTeacherId = null; // מזהה המורה המחובר כרגע
+let activeSchoolId = null; 
+let activeTeacherIndex = 1; // המורה הנבחר מתוך הרשימה
 let teacherMode = 'login'; 
 let myClasses = [];
 
 // --- Helpers ---
-// יצירת מזהה בטוח ל-Firestore שתומך בעברית (Unicode)
 const getSafeId = (str) => str ? Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('') : "";
 
 const showMsg = (txt, isError = false) => {
@@ -49,36 +49,7 @@ const showSection = (id) => {
     if (target) target.classList.remove('hidden-section');
 };
 
-// --- Auth & Initial Data ---
-
-onAuthStateChanged(auth, (user) => {
-    isAuthReady = !!user;
-    if(user) window.loadSchools();
-});
-
-// טעינת רשימת בתי הספר עבור "התחברות מהירה"
-window.loadSchools = async () => {
-    const list = document.getElementById('loginSchoolList');
-    if(!list) return;
-    try {
-        const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'teacher_profiles'));
-        const schools = new Set();
-        snap.forEach(d => {
-            const data = d.data();
-            if (data.schoolName) schools.add(data.schoolName);
-        });
-        
-        list.innerHTML = '<option value="">-- בחר בית ספר --</option>';
-        schools.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s;
-            opt.innerText = s;
-            list.appendChild(opt);
-        });
-    } catch(e) { console.error("Schools load error", e); }
-};
-
-// --- Teacher UI Actions ---
+// --- Teacher UI Logic ---
 
 window.switchTeacherMode = (mode) => {
     teacherMode = mode;
@@ -86,20 +57,20 @@ window.switchTeacherMode = (mode) => {
     const tabSignup = document.getElementById('tabSignup');
     const newFields = document.getElementById('newTeacherFields');
     const mainBtn = document.getElementById('mainTeacherBtn');
-    const schoolSelect = document.getElementById('schoolSelectArea');
+    const loginFields = document.getElementById('loginTeacherSelection');
 
     if (mode === 'login') {
         tabLogin.className = "flex-1 py-3 text-white font-bold border-b-2 border-blue-500 transition";
         tabSignup.className = "flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition";
         newFields.classList.add('hidden');
-        schoolSelect.classList.remove('hidden');
+        if(loginFields) loginFields.classList.remove('hidden');
         mainBtn.innerText = "כניסה למערכת";
     } else {
         tabSignup.className = "flex-1 py-3 text-white font-bold border-b-2 border-blue-500 transition";
         tabLogin.className = "flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition";
         newFields.classList.remove('hidden');
-        schoolSelect.classList.add('hidden');
-        mainBtn.innerText = "רישום מורה חדש";
+        if(loginFields) loginFields.classList.add('hidden');
+        mainBtn.innerText = "רישום בית ספר חדש";
     }
 };
 
@@ -107,57 +78,118 @@ window.checkTeacherGate = () => {
     if (document.getElementById('globalTeacherPass').value === "1234") {
         document.getElementById('teacherGate').classList.add('hidden');
         document.getElementById('teacherAuthFields').classList.remove('hidden');
+        window.initLoginListeners();
     } else showMsg("סיסמה שגויה", true);
+};
+
+// מאזין לשדה שם בית הספר בזמן התחברות כדי להציג את רשימת המורים
+window.initLoginListeners = () => {
+    const schoolInput = document.getElementById('teacherUser'); // משתמשים בשדה הקיים כשם בי"ס
+    if (!schoolInput) return;
+
+    schoolInput.onblur = async () => {
+        if (teacherMode !== 'login') return;
+        const schoolName = schoolInput.value.trim();
+        if (!schoolName) return;
+
+        const schoolId = getSafeId(schoolName);
+        try {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId));
+            const teacherSelect = document.getElementById('teacherIndexSelect');
+            
+            if (snap.exists() && teacherSelect) {
+                const count = snap.data().teacherCount || 1;
+                teacherSelect.innerHTML = '';
+                for (let i = 1; i <= count; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.innerText = `מורה ${i}`;
+                    teacherSelect.appendChild(opt);
+                }
+                document.getElementById('teacherSelectContainer')?.classList.remove('hidden');
+            }
+        } catch(e) { console.error("Error fetching school info", e); }
+    };
 };
 
 window.loginTeacher = async () => {
     if (!isAuthReady) return showMsg("מתחבר...");
-    const userNm = document.getElementById('teacherUser').value.trim();
+    const schoolName = document.getElementById('teacherUser').value.trim();
     const pass = document.getElementById('teacherPass').value;
-    if (!userNm || !pass) return showMsg("נא להזין שם משתמש וסיסמה");
+    
+    if (!schoolName || !pass) return showMsg("נא למלא את כל השדות");
 
-    const teacherId = getSafeId(userNm);
-    const teacherRef = doc(db, 'artifacts', appId, 'public', 'data', 'teacher_profiles', teacherId);
+    const schoolId = getSafeId(schoolName);
+    const schoolRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId);
     
     try {
-        const snap = await getDoc(teacherRef);
+        const snap = await getDoc(schoolRef);
         
         if (teacherMode === 'login') {
-            if (!snap.exists()) return showMsg("המורה לא קיים במערכת. אנא בצע רישום.", true);
+            if (!snap.exists()) return showMsg("בית הספר לא רשום במערכת", true);
             if (snap.data().password !== pass) return showMsg("סיסמה שגויה", true);
-        } else {
-            // מצב רישום מורה חדש
-            const school = document.getElementById('schoolName').value.trim();
-            const head = document.getElementById('deptHead').value.trim();
-            if (!school || !head) return showMsg("יש למלא את כל שדות החובה", true);
-            if (snap.exists()) return showMsg("שם המשתמש כבר תפוס על ידי מורה אחר", true);
             
-            await setDoc(teacherRef, { 
-                username: userNm, 
+            activeTeacherIndex = document.getElementById('teacherIndexSelect').value || 1;
+        } else {
+            // רישום חדש
+            const deptHead = document.getElementById('deptHead').value.trim();
+            const count = parseInt(document.getElementById('teacherCountInput')?.value || "1");
+            
+            if (!deptHead || !count) return showMsg("יש למלא כמות מורים ושם רכז", true);
+            if (snap.exists()) return showMsg("שם בית הספר כבר תפוס", true);
+            
+            await setDoc(schoolRef, { 
+                schoolName: schoolName, 
                 password: pass, 
-                schoolName: school, 
-                departmentHead: head, 
-                classes: [],
+                departmentHead: deptHead, 
+                teacherCount: count,
                 createdAt: new Date().toISOString()
             });
+            activeTeacherIndex = 1;
         }
         
-        // טעינת נתוני המורה הספציפי
-        const finalData = (await getDoc(teacherRef)).data();
-        activeTeacherId = teacherId; // הגדרת המורה הפעיל לבידוד נתונים
-        myClasses = finalData.classes || [];
+        const finalData = (await getDoc(schoolRef)).data();
+        activeSchoolId = schoolId;
         
-        document.getElementById('teacherProfileInfo').innerText = `${finalData.schoolName} | רכז: ${finalData.departmentHead}`;
+        // יצירת מזהה ייחודי למורה בתוך בית הספר לצורך בידוד נתונים
+        const teacherDataKey = `${activeSchoolId}_T${activeTeacherIndex}`;
+        const teacherDataRef = doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', teacherDataKey);
+        
+        const teacherSnap = await getDoc(teacherDataRef);
+        if (teacherSnap.exists()) {
+            myClasses = teacherSnap.data().classes || [];
+        } else {
+            // אתחול אזור פרטי למורה חדש בבית ספר קיים
+            await setDoc(teacherDataRef, { classes: [] });
+            myClasses = [];
+        }
+
+        document.getElementById('teacherProfileInfo').innerText = `${finalData.schoolName} | מורה ${activeTeacherIndex} | רכז: ${finalData.departmentHead}`;
         
         window.updateClassUI();
         window.closeLoginModals();
         window.loadTeacherRoster();
         showSection('teacherDashboard');
-        showMsg(`ברוך הבא, ${finalData.username}`);
+        showMsg(`כניסה בוצעה למורה ${activeTeacherIndex}`);
     } catch (e) { showMsg("שגיאת תקשורת עם השרת", true); }
 };
 
-// --- Class Management ---
+// --- Class Management & Scoping ---
+
+window.addNewClass = async () => {
+    const name = document.getElementById('newClassNameInput').value.trim();
+    if(!name || myClasses.includes(name)) return;
+    
+    myClasses.push(name);
+    const teacherDataKey = `${activeSchoolId}_T${activeTeacherIndex}`;
+    const teacherDataRef = doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', teacherDataKey);
+    
+    await setDoc(teacherDataRef, { classes: myClasses }, { merge: true });
+    
+    window.updateClassUI();
+    document.getElementById('newClassNameInput').value = "";
+    showMsg(`כיתה ${name} נוספה לאזור הפרטי שלך`);
+};
 
 window.updateClassUI = () => {
     const selector = document.getElementById('activeClassSelector');
@@ -171,52 +203,16 @@ window.updateClassUI = () => {
     });
 };
 
-window.addNewClass = async () => {
-    const name = document.getElementById('newClassNameInput').value.trim();
-    if(!name) return;
-    if(myClasses.includes(name)) return showMsg("הכיתה כבר קיימת", true);
-    
-    myClasses.push(name);
-    const teacherRef = doc(db, 'artifacts', appId, 'public', 'data', 'teacher_profiles', activeTeacherId);
-    await setDoc(teacherRef, { classes: myClasses }, { merge: true });
-    
-    window.updateClassUI();
-    document.getElementById('newClassNameInput').value = "";
-    showMsg(`כיתה ${name} נוספה לסביבה שלך`);
-};
-
-// --- Excel Import ---
-
-document.getElementById('excelInput')?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-        try {
-            const data = evt.target.result;
-            const workbook = XLSX.read(data, { type: 'binary' });
-            const sheetName = workbook.SheetNames[0];
-            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
-            
-            let text = "";
-            rows.forEach(row => {
-                // מניח ששם בעמודה ראשונה ות"ז בשנייה
-                if(row[0] && row[1]) text += `${row[0]}, ${row[1]}\n`;
-            });
-            document.getElementById('studentIdsList').value = text;
-            showMsg("הקובץ נטען. בדוק את הרשימה ולחץ על עדכן.");
-        } catch(err) { showMsg("שגיאה בקריאת הקובץ", true); }
-    };
-    reader.readAsBinaryString(file);
-});
-
 window.saveRoster = async () => {
-    if (!activeTeacherId) return;
+    if (!activeSchoolId) return;
     const activeClass = document.getElementById('activeClassSelector').value;
-    if(activeClass === 'all') return showMsg("אנא בחר כיתה ספציפית שאליה תרצה לייבא את התלמידים", true);
+    if(activeClass === 'all') return showMsg("אנא בחר כיתה ספציפית", true);
     
     const raw = document.getElementById('studentIdsList').value;
     const lines = raw.split('\n').filter(l => l.trim());
+    
+    // מזהה המורה המשולב לסינון תלמידים
+    const teacherScopeId = `${activeSchoolId}_T${activeTeacherIndex}`;
     
     try {
         for (const line of lines) {
@@ -224,26 +220,27 @@ window.saveRoster = async () => {
             const name = parts[0];
             const tz = parts[1];
             if(tz) {
-                // שמירת התלמיד עם שיוך למזהה המורה הספציפי
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz), { 
                     tz, 
                     studentName: name, 
                     className: activeClass, 
-                    teacherId: activeTeacherId 
+                    teacherScopeId: teacherScopeId // משויך למורה הספציפי
                 });
             }
         }
-        showMsg("רשימת הכיתה עודכנה בהצלחה");
+        showMsg("התלמידים נוספו בהצלחה");
         document.getElementById('studentIdsList').value = "";
         window.loadTeacherRoster();
-    } catch (e) { showMsg("שגיאת הרשאה בכתיבה", true); }
+    } catch (e) { showMsg("שגיאת כתיבה", true); }
 };
 
 window.loadTeacherRoster = async () => {
-    if (!activeTeacherId) return;
+    if (!activeSchoolId) return;
     const table = document.getElementById('rosterTableBody');
     const selectedClass = document.getElementById('activeClassSelector').value;
-    table.innerHTML = '<tr><td colspan="4" class="text-center p-4 italic">טוען את התלמידים שלך...</td></tr>';
+    const teacherScopeId = `${activeSchoolId}_T${activeTeacherIndex}`;
+    
+    table.innerHTML = '<tr><td colspan="4" class="text-center p-4">טוען נתונים אישיים...</td></tr>';
     
     try {
         const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'access_list'));
@@ -251,28 +248,37 @@ window.loadTeacherRoster = async () => {
         let count = 0;
         snap.forEach(d => {
             const data = d.data();
-            // סינון קפדני: רק תלמידים ששייכים למורה המחובר
-            if (data.teacherId === activeTeacherId && (selectedClass === 'all' || data.className === selectedClass)) {
+            // סינון לפי המורה הספציפי בתוך בית הספר
+            if (data.teacherScopeId === teacherScopeId && (selectedClass === 'all' || data.className === selectedClass)) {
                 count++;
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-800 hover:bg-white/5 transition";
                 tr.innerHTML = `
                     <td class="p-3">${data.studentName || 'ללא שם'}</td>
-                    <td class="p-3 font-mono text-gray-300">${data.tz}</td>
+                    <td class="p-3 font-mono">${data.tz}</td>
                     <td class="p-3 text-blue-400">${data.className}</td>
                     <td class="p-3 text-center">
-                        <button onclick="window.viewStudentWork('${data.tz}')" class="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-lg hover:bg-blue-600 hover:text-white transition text-xs font-bold">צפה בתוצרים 👁️</button>
+                        <button onclick="window.viewStudentWork('${data.tz}')" class="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold">צפה 👁️</button>
                     </td>
                 `;
                 table.appendChild(tr);
             }
         });
         document.getElementById('rosterCount').innerText = count;
-        if(count === 0) table.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-gray-500">אין תלמידים רשומים בכיתה זו.</td></tr>';
-    } catch(e) { table.innerHTML = '<tr><td colspan="4" class="text-center text-red-400 text-xs">שגיאת טעינה - וודא חיבור אינטרנט</td></tr>'; }
+    } catch(e) { table.innerHTML = '<tr><td colspan="4">שגיאה בטעינה</td></tr>'; }
 };
 
-// --- Shared functions ---
+// --- Shared / UI ---
+
+window.togglePass = (id) => {
+    const el = document.getElementById(id);
+    if(el) el.type = el.type === 'password' ? 'text' : 'password';
+};
+
+window.closeLoginModals = () => {
+    ['studentLoginModal', 'teacherLoginModal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+};
+
 window.openLoginModal = (type) => {
     window.closeLoginModals();
     const modal = document.getElementById(type === 'student' ? 'studentLoginModal' : 'teacherLoginModal');
@@ -286,18 +292,6 @@ window.openLoginModal = (type) => {
     }
 };
 
-window.closeLoginModals = () => {
-    ['studentLoginModal', 'teacherLoginModal'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.classList.add('hidden');
-    });
-};
-
-window.togglePass = (id) => {
-    const el = document.getElementById(id);
-    if(el) el.type = el.type === 'password' ? 'text' : 'password';
-};
-
 window.loginStudent = async () => {
     const tz = document.getElementById('studentTZ').value.trim();
     if(!tz) return showMsg("נא להזין תעודת זהות", true);
@@ -308,15 +302,14 @@ window.loginStudent = async () => {
             const data = snap.data();
             document.getElementById('welcomeStudent').innerText = `שלום, ${data.studentName || tz} (${data.className})`;
             showSection('studentWorkspace');
-        } else {
-            showMsg("תעודת הזהות אינה רשומה במערכת של אף מורה", true);
-        }
+        } else showMsg("תעודת זהות לא נמצאה", true);
     } catch(e) { showMsg("שגיאת אימות", true); }
 };
 
-// --- Init Auth ---
+// --- Init ---
 (async () => { 
     try {
         await signInAnonymously(auth); 
-    } catch(e) { console.error("Firebase auth failed", e); }
+        onAuthStateChanged(auth, (user) => { isAuthReady = !!user; });
+    } catch(e) { console.error("Auth failed", e); }
 })();
