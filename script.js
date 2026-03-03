@@ -1,6 +1,7 @@
 /**
  * Skills Practice - Project Logic
- * גרסה 3.4: תמיכה במורים אוטונומיים, הזנה ידנית מופרדת, וייבוא מ-Google Sheets.
+ * גרסה 3.5: הוספת אפשרות להזנה ידנית ישירה מתוך טבלת התלמידים.
+ * תמיכה במורים אוטונומיים, הזנה ידנית מופרדת, וייבוא מ-Google Sheets.
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -29,6 +30,7 @@ let activeTeacherName = "";
 let teacherMode = 'login'; 
 let myClasses = [];
 let schoolTeachers = [];
+let activeTZ = null;
 
 // --- Helpers ---
 const getSafeId = (str) => str ? Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('') : "";
@@ -38,7 +40,7 @@ const showMsg = (txt, isError = false) => {
     t.className = `fixed top-8 left-1/2 -translate-x-1/2 ${isError ? 'bg-red-600' : 'bg-blue-600'} text-white px-8 py-4 rounded-xl z-[200] font-bold shadow-2xl transition-all text-center border-2 border-white/20`;
     t.innerText = txt;
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 4000);
+    setTimeout(() => { if(t && t.parentNode) t.parentNode.removeChild(t); }, 4000);
 };
 
 const showSection = (id) => {
@@ -72,7 +74,31 @@ window.initTeacherEnvironment = async () => {
     window.loadTeacherRoster();
 };
 
-// --- Student Import (Manual, Excel, Sheets) ---
+// --- Student Import (Manual, Table, Excel, Sheets) ---
+
+// הוספה ישירה מתוך שורת הטבלה
+window.addFromTable = async () => {
+    const nameInput = document.getElementById('tableInputName');
+    const tzInput = document.getElementById('tableInputTZ');
+    const selClass = document.getElementById('activeClassSelector').value;
+
+    const name = nameInput.value.trim();
+    const tz = tzInput.value.trim();
+
+    if(!name || !tz) return showMsg("נא להזין שם ותעודת זהות בשורת ההוספה", true);
+    if(selClass === 'all') return showMsg("נא לבחור כיתה ספציפית לפני הוספת תלמיד", true);
+
+    const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
+    try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz), { 
+            tz, studentName: name, className: selClass, teacherScopeId: tScope 
+        });
+        showMsg(`התלמיד ${name} נוסף בהצלחה לרשימה`);
+        nameInput.value = "";
+        tzInput.value = "";
+        window.loadTeacherRoster();
+    } catch(e) { showMsg("שגיאת שמירה", true); }
+};
 
 window.addManualStudent = async () => {
     const name = document.getElementById('manualStudentName').value.trim();
@@ -102,7 +128,6 @@ window.importFromGoogleSheets = async () => {
 
     showMsg("מושך נתונים מגוגל...");
     try {
-        // המרת קישור גוגל שיטס לייצוא CSV
         const fileId = url.match(/\/d\/(.+?)\//);
         if(!fileId) throw new Error("URL לא תקין");
         const csvUrl = `https://docs.google.com/spreadsheets/d/${fileId[1]}/export?format=csv`;
@@ -115,7 +140,7 @@ window.importFromGoogleSheets = async () => {
         let count = 0;
         const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
         for (const row of rows) {
-            if(row[0] && row[1]) { // שם ות"ז
+            if(row[0] && row[1]) {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', row[1].toString().trim()), { 
                     tz: row[1].toString().trim(), 
                     studentName: row[0].toString().trim(), 
@@ -193,7 +218,6 @@ window.loginTeacher = async () => {
         }
         activeSchoolId = schoolId;
         
-        // Populate switcher in dashboard
         const switcher = document.getElementById('dashboardTeacherSwitcher');
         switcher.innerHTML = schoolTeachers.map(n => `<option value="${n}" ${n === activeTeacherName ? 'selected' : ''}>${n}</option>`).join('');
         
@@ -208,31 +232,50 @@ window.loginTeacher = async () => {
 
 window.loadTeacherRoster = async () => {
     const table = document.getElementById('rosterTableBody');
-    const selClass = document.getElementById('activeClassSelector').value;
+    const selectedClass = document.getElementById('activeClassSelector').value;
     const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
-    table.innerHTML = '<tr><td colspan="5" class="text-center p-4">טוען...</td></tr>';
+    table.innerHTML = '<tr><td colspan="5" class="text-center p-4 italic text-white/50">טוען נתונים...</td></tr>';
     
-    const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'access_list'));
-    table.innerHTML = '';
-    let count = 0;
-    snap.forEach(d => {
-        const data = d.data();
-        if (data.teacherScopeId === tScope && (selClass === 'all' || data.className === selClass)) {
-            count++;
-            table.innerHTML += `<tr class="border-b border-slate-800">
-                <td class="p-4">${data.studentName}</td>
-                <td class="p-4 font-mono">${data.tz}</td>
-                <td class="p-4 text-blue-400">${data.className}</td>
-                <td class="p-4 text-center">
-                    <button onclick="window.viewStudentWork('${data.tz}')" class="text-blue-500 font-bold hover:underline">פתח 👁️</button>
-                </td>
-                <td class="p-4 text-center">
-                    <button onclick="window.deleteStudent('${data.tz}')" class="text-red-500 text-xs">מחק 🗑️</button>
-                </td>
-            </tr>`;
-        }
-    });
-    document.getElementById('rosterCount').innerText = count;
+    try {
+        const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'access_list'));
+        table.innerHTML = '';
+        
+        // הוספת שורת הזנה ישירה בראש הטבלה
+        const inputRow = document.createElement('tr');
+        inputRow.className = "bg-blue-900/10 border-b border-blue-500/30";
+        inputRow.innerHTML = `
+            <td class="p-2"><input type="text" id="tableInputName" class="w-full bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-xs" placeholder="הזן שם תלמיד..."></td>
+            <td class="p-2"><input type="text" id="tableInputTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-xs" placeholder="הזן תעודת זהות..."></td>
+            <td class="p-2 text-blue-400 font-bold text-xs">${selectedClass === 'all' ? 'בחר כיתה' : selectedClass}</td>
+            <td colspan="2" class="p-2 text-center">
+                <button onclick="window.addFromTable()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs font-black hover:bg-blue-500 transition shadow-lg shadow-blue-500/20 border border-blue-400/30">הוספה מהירה +</button>
+            </td>
+        `;
+        table.appendChild(inputRow);
+
+        let count = 0;
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.teacherScopeId === tScope && (selectedClass === 'all' || data.className === selectedClass)) {
+                count++;
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-800 hover:bg-white/5 transition";
+                tr.innerHTML = `
+                    <td class="p-4 text-white font-medium">${data.studentName}</td>
+                    <td class="p-4 font-mono text-gray-300">${data.tz}</td>
+                    <td class="p-4 text-blue-400 font-bold">${data.className}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="window.viewStudentWork('${data.tz}')" class="text-blue-500 font-black hover:underline hover:text-blue-300 transition">פתח תוצרים 👁️</button>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="window.deleteStudent('${data.tz}')" class="text-red-500/70 hover:text-red-500 transition text-xs">מחק 🗑️</button>
+                    </td>
+                `;
+                table.appendChild(tr);
+            }
+        });
+        document.getElementById('rosterCount').innerText = count;
+    } catch(e) { table.innerHTML = '<tr><td colspan="5" class="p-4 text-red-500">שגיאת טעינה</td></tr>'; }
 };
 
 window.deleteStudent = async (tz) => {
@@ -243,6 +286,7 @@ window.deleteStudent = async (tz) => {
 
 window.updateClassUI = () => {
     const s = document.getElementById('activeClassSelector');
+    if(!s) return;
     s.innerHTML = '<option value="all">כל התלמידים שלי</option>' + myClasses.map(c => `<option value="${c}">${c}</option>`).join('');
 };
 
@@ -254,6 +298,7 @@ window.addNewClass = async () => {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', tKey), { classes: myClasses }, { merge: true });
     window.updateClassUI();
     document.getElementById('newClassNameInput').value = "";
+    showMsg(`כיתה ${n} נוצרה בהצלחה`);
 };
 
 window.checkTeacherGate = () => {
@@ -268,24 +313,39 @@ window.togglePass = (id) => { const el = document.getElementById(id); if(el) el.
 window.closeLoginModals = () => { ['studentLoginModal', 'teacherLoginModal'].forEach(id => document.getElementById(id)?.classList.add('hidden')); };
 window.openLoginModal = (type) => {
     window.closeLoginModals();
-    document.getElementById(type === 'student' ? 'studentLoginModal' : 'teacherLoginModal')?.classList.remove('hidden');
-    if(type === 'teacher') {
-        document.getElementById('teacherGate').classList.remove('hidden');
-        document.getElementById('teacherAuthFields').classList.add('hidden');
-        window.switchTeacherMode('login');
+    const modal = document.getElementById(type === 'student' ? 'studentLoginModal' : 'teacherLoginModal');
+    if(modal) {
+        modal.classList.remove('hidden');
+        if(type === 'teacher') {
+            document.getElementById('teacherGate').classList.remove('hidden');
+            document.getElementById('teacherAuthFields').classList.add('hidden');
+            window.switchTeacherMode('login');
+        }
     }
 };
 
 window.loginStudent = async () => {
     const tz = document.getElementById('studentTZ').value.trim();
-    const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz));
-    if (snap.exists()) {
-        const data = snap.data();
-        document.getElementById('welcomeStudent').innerText = `שלום, ${data.studentName || tz} (${data.className})`;
-        window.closeLoginModals();
-        showSection('studentWorkspace');
-    } else showMsg("לא רשום", true);
+    if(!tz) return showMsg("הזן תעודת זהות", true);
+    try {
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz));
+        if (snap.exists()) {
+            const data = snap.data();
+            activeTZ = tz;
+            document.getElementById('welcomeStudent').innerText = `שלום, ${data.studentName || tz} (${data.className})`;
+            window.closeLoginModals();
+            showSection('studentWorkspace');
+        } else showMsg("תעודת זהות לא רשומה", true);
+    } catch(e) { showMsg("שגיאת אימות", true); }
 };
 
+window.closeModal = () => document.getElementById('modalOverlay').classList.add('hidden');
+window.closeViewModal = () => document.getElementById('teacherViewModal').classList.add('hidden');
+
 // Initial Auth
-(async () => { await signInAnonymously(auth); })();
+(async () => { 
+    try {
+        await signInAnonymously(auth); 
+        onAuthStateChanged(auth, (user) => { isAuthReady = !!user; });
+    } catch(e) { console.error("Auth failed", e); }
+})();
