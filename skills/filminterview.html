@@ -497,7 +497,11 @@
             link.download = `תכנון_ראיון_${title.replace(/\s/g, '_')}.doc`;
             link.click();
         };
-
+// בתוך קובץ המטלה בתיקיית skills
+function submitToTeacher() {
+    const myData = { score: 100, answers: ["A", "B", "C"] }; // דוגמה לנתונים
+    window.parent.postMessage({ type: 'SUBMIT_TASK', payload: myData }, '*');
+}
         document.getElementById('modalOverlay').addEventListener('click', (e) => {
             if (e.target.id === 'modalOverlay') closeModal();
         });
