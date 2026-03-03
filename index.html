@@ -8,7 +8,7 @@
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
-    <!-- SheetJS לייבוא אקסל -->
+    <!-- SheetJS for Excel Import -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
@@ -31,7 +31,7 @@
             <div onclick="window.openLoginModal('teacher')" class="glass p-8 rounded-3xl cursor-pointer hover:border-blue-500 transition border-2 border-transparent group">
                 <div class="text-5xl mb-4 group-hover:scale-110 transition text-center">🔑</div>
                 <h2 class="text-2xl font-bold mb-2 text-white text-center">כניסת מורים</h2>
-                <p class="text-gray-400 text-sm text-center">ניהול כיתות, אקסל והתחברות מהירה</p>
+                <p class="text-gray-400 text-sm text-center">ניהול כיתות לפי מורה אישי</p>
             </div>
         </div>
     </div>
@@ -43,7 +43,7 @@
             <h2 class="text-3xl font-black mb-6 text-orange-500">אימות תלמיד</h2>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2 font-bold">מספר תעודת זהות:</label>
+                    <label class="block text-sm text-gray-400 mb-2 font-bold text-right">מספר תעודת זהות:</label>
                     <input type="text" id="studentTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-4 text-white focus:border-orange-500 outline-none text-center text-xl tracking-widest" placeholder="000000000">
                 </div>
                 <button onclick="window.loginStudent()" class="btn-primary w-full text-lg mt-4 font-black">התחל בעבודה</button>
@@ -56,6 +56,7 @@
         <div class="glass p-10 rounded-3xl w-full max-w-md border-2 border-blue-500 shadow-2xl relative overflow-hidden">
             <button onclick="window.closeLoginModals()" class="absolute top-4 left-4 text-gray-400 hover:text-white text-2xl z-10">✕</button>
             
+            <!-- Gatekeeper -->
             <div id="teacherGate" class="space-y-4">
                 <h2 class="text-3xl font-black mb-6 text-blue-500">אזור מורים מוגן</h2>
                 <div>
@@ -68,43 +69,97 @@
                 <button onclick="window.checkTeacherGate()" class="btn-secondary w-full text-lg mt-4 font-black">אימות גישה</button>
             </div>
 
+            <!-- Auth Fields -->
             <div id="teacherAuthFields" class="hidden space-y-4">
                 <div class="flex border-b border-slate-700 mb-6">
                     <button id="tabLogin" onclick="window.switchTeacherMode('login')" class="flex-1 py-3 text-white font-bold border-b-2 border-blue-500 transition">כניסה</button>
-                    <button id="tabSignup" onclick="window.switchTeacherMode('signup')" class="flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition">רישום חדש</button>
+                    <button id="tabSignup" onclick="window.switchTeacherMode('signup')" class="flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition">רישום בית ספר</button>
                 </div>
 
                 <div class="space-y-3">
-                    <!-- התחברות מהירה לפי בית ספר -->
-                    <div id="schoolSelectArea">
-                        <label class="block text-xs text-blue-400 font-bold mb-1">בחר בית ספר להתחברות מהירה:</label>
-                        <select id="loginSchoolList" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none mb-2">
-                            <option value="">-- טוען רשימת בתי ספר... --</option>
-                        </select>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1 text-right">שם בית הספר:</label>
+                        <input type="text" id="teacherUser" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none" placeholder="הזן שם מוסד מדויק">
                     </div>
 
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">שם משתמש:</label>
-                        <input type="text" id="teacherUser" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none" placeholder="הזן שם משתמש">
+                    <div id="teacherSelectContainer" class="hidden animate-in slide-in-from-top duration-300">
+                        <label class="block text-xs text-blue-400 font-bold mb-1 text-right">בחר את שמך מהרשימה:</label>
+                        <select id="teacherIndexSelect" class="w-full bg-blue-900/20 border border-blue-500/50 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none">
+                        </select>
                     </div>
                     
                     <div>
-                        <label class="block text-xs text-gray-400 mb-1">סיסמה אישית:</label>
+                        <label class="block text-xs text-gray-400 mb-1 text-right">סיסמת ניהול בית ספרית:</label>
                         <div class="relative">
                             <input type="password" id="teacherPass" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right focus:border-blue-500 outline-none pl-10" placeholder="סיסמה">
-                            <button type="button" onclick="window.togglePass('teacherPass')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">👁️</button>
+                            <button type="button" onclick="window.togglePass('teacherPass')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">👁️</button>
                         </div>
                     </div>
                     
                     <div id="newTeacherFields" class="hidden space-y-3 pt-4 border-t border-slate-700">
-                        <input type="text" id="schoolName" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="שם בית הספר (חובה)">
-                        <input type="text" id="deptHead" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="שם רכז המגמה (חובה)">
+                        <div>
+                            <label class="block text-[10px] text-blue-400 font-bold mb-1 text-right">שם רכז המגמה (חובה):</label>
+                            <input type="text" id="deptHead" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="למשל: כהן משה">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-blue-400 font-bold mb-1 text-right">שמות המורים שיעבדו במערכת (שם אחד בכל שורה):</label>
+                            <textarea id="teacherNamesInput" class="w-full h-24 bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right text-xs leading-tight focus:border-blue-400 outline-none" placeholder="מורה א'&#10;מורה ב'&#10;מורה ג'"></textarea>
+                        </div>
                     </div>
                 </div>
                 
                 <button id="mainTeacherBtn" onclick="window.loginTeacher()" class="btn-secondary w-full text-lg mt-4 font-black">כניסה למערכת</button>
             </div>
         </div>
+    </div>
+
+    <!-- Student Workspace -->
+    <div id="studentWorkspace" class="hidden-section p-4 md:p-12 text-right">
+        <header class="max-w-5xl mx-auto flex justify-between items-center mb-8 border-b border-gray-800 pb-6">
+            <div>
+                <h1 class="text-4xl font-black italic text-white">צילום ראיון</h1>
+                <p id="welcomeStudent" class="text-blue-400 font-bold"></p>
+            </div>
+            <button onclick="location.reload()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 transition">התנתק</button>
+        </header>
+
+        <div id="studentFeedbackBox" class="max-w-5xl mx-auto mb-8 hidden">
+            <div class="bg-blue-900/30 border-2 border-blue-500 p-6 rounded-2xl">
+                <h4 class="text-blue-400 font-black mb-2 flex items-center gap-2">
+                    <span>💬</span> משוב מהמורה:
+                </h4>
+                <p id="feedbackText" class="text-white text-lg italic"></p>
+            </div>
+        </div>
+        
+        <main class="max-w-5xl mx-auto space-y-10">
+            <!-- משימות מערכת מובנות -->
+            <section>
+                <h2 class="text-2xl font-black text-blue-300 mb-4 border-r-4 border-blue-500 pr-4">משימות פיתוח הפקה</h2>
+                <div class="grid gap-4">
+                     <div class="glass p-6 rounded-2xl flex justify-between items-center hover:bg-white/5 transition border-r-4 border-orange-500">
+                        <h3 class="text-lg font-bold text-white">1. צוות ההפקה</h3>
+                        <button onclick="window.openProjectModal('crew', 'צוות ההפקה')" class="btn-secondary px-8">פתח יומן עבודה ✍️</button>
+                     </div>
+                     <div class="glass p-6 rounded-2xl flex justify-between items-center hover:bg-white/5 transition border-r-4 border-orange-500">
+                        <h3 class="text-lg font-bold text-white">2. תכנון לוקיישן</h3>
+                        <button onclick="window.openProjectModal('location', 'תכנון לוקיישן')" class="btn-secondary px-8">פתח יומן עבודה ✍️</button>
+                     </div>
+                     <div class="glass p-6 rounded-2xl flex justify-between items-center hover:bg-white/5 transition border-r-4 border-orange-500">
+                        <h3 class="text-lg font-bold text-white">3. רשימת שאלות</h3>
+                        <button onclick="window.openProjectModal('questions', 'שאלות לראיון')" class="btn-secondary px-8">פתח יומן עבודה ✍️</button>
+                     </div>
+                </div>
+            </section>
+
+            <!-- משימות מיומנויות חיצוניות (תיקיית skills) -->
+            <section>
+                <h2 class="text-2xl font-black text-green-300 mb-4 border-r-4 border-green-500 pr-4">מטלות מיומנויות דיגיטליות</h2>
+                <div id="skillsTasksContainer" class="grid md:grid-cols-2 gap-4">
+                    <!-- יאוכלס ע"י script.js -->
+                </div>
+            </section>
+        </main>
     </div>
 
     <!-- Teacher Dashboard -->
@@ -118,16 +173,16 @@
         </header>
 
         <div class="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
-            <!-- Sidebar: Class Management -->
+            <!-- Sidebar -->
             <div class="lg:col-span-1 space-y-6">
                 <div class="glass p-6 rounded-3xl border-blue-500/30 border">
                     <h3 class="text-xl font-bold mb-4 text-white">1. בחירת כיתה</h3>
                     <select id="activeClassSelector" onchange="window.loadTeacherRoster()" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white mb-4">
-                        <option value="all">כל התלמידים</option>
+                        <option value="all">כל התלמידים שלי</option>
                     </select>
                     <div class="flex gap-2">
                         <input type="text" id="newClassNameInput" class="flex-grow bg-black/40 border border-slate-700 rounded-xl p-2 text-white text-sm" placeholder="שם כיתה חדשה">
-                        <button onclick="window.addNewClass()" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-bold">+</button>
+                        <button onclick="window.addNewClass()" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-500 transition">+</button>
                     </div>
                 </div>
 
@@ -137,28 +192,28 @@
                         <div class="p-4 border-2 border-dashed border-slate-700 rounded-2xl text-center">
                             <label class="block text-xs text-gray-400 mb-2">ייבוא מאקסל (עמודות: שם, ת"ז)</label>
                             <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
-                            <button onclick="document.getElementById('excelInput').click()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs hover:bg-slate-700 transition">בחר קובץ 📁</button>
+                            <button onclick="document.getElementById('excelInput').click()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs hover:bg-slate-700 transition font-bold">בחר קובץ אקסל 📁</button>
                         </div>
-                        <div class="text-center">או הזנה ידנית:</div>
-                        <textarea id="studentIdsList" class="w-full h-32 bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-xs" placeholder="שם, תעודת זהות (אחד בשורה)"></textarea>
+                        <div class="text-center text-[10px] text-gray-500">או הדבקה ידנית (שם, ת"ז):</div>
+                        <textarea id="studentIdsList" class="w-full h-32 bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-xs leading-relaxed" placeholder="ישראל ישראלי, 123456789"></textarea>
                         <button onclick="window.saveRoster()" class="btn-primary w-full text-sm font-black">עדכן רשימת כיתה</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Main: Students List -->
+            <!-- Main Roster -->
             <div class="lg:col-span-2 glass p-6 rounded-3xl min-h-[400px]">
                 <h3 class="text-xl font-bold mb-6 flex justify-between items-center text-white">
-                    תלמידים רשומים
+                    תלמידים רשומים באזור שלי
                     <span id="rosterCount" class="text-sm bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full font-mono">0</span>
                 </h3>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto text-right">
                     <table class="w-full text-right text-sm">
                         <thead>
                             <tr class="border-b border-slate-800 text-gray-500">
-                                <th class="p-3">שם התלמיד</th>
-                                <th class="p-3">תעודת זהות</th>
-                                <th class="p-3">כיתה</th>
+                                <th class="p-3 text-right">שם התלמיד</th>
+                                <th class="p-3 text-right">תעודות זהות</th>
+                                <th class="p-3 text-right">כיתה</th>
                                 <th class="p-3 text-center">פעולות</th>
                             </tr>
                         </thead>
@@ -169,12 +224,56 @@
         </div>
     </div>
 
-    <!-- (Modals for Work and View remain the same from previous version) -->
+    <!-- Edit Task Modal -->
     <div id="modalOverlay" class="modal-overlay hidden">
-        <!-- Student Edit Modal Content -->
+        <div class="glass w-full max-w-2xl rounded-3xl border-2 border-orange-500 flex flex-col max-h-[90vh] overflow-hidden">
+            <div class="p-6 bg-slate-900 flex justify-between items-center border-b border-slate-800">
+                <h3 id="modalTitle" class="text-2xl font-black text-white text-right"></h3>
+                <button onclick="window.closeModal()" class="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div class="p-8 flex flex-col flex-grow text-right">
+                <textarea id="workInput" class="flex-grow w-full bg-black/40 border border-slate-700 rounded-2xl p-6 text-white focus:outline-none focus:border-orange-500 resize-none mb-6 text-lg text-right leading-relaxed"></textarea>
+                <div class="flex justify-between items-center">
+                    <button onclick="window.saveWork()" class="btn-primary px-12 font-black">שמור עבודה</button>
+                    <span id="saveStatus" class="text-green-400 opacity-0 transition-opacity font-bold">נשמר!</span>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Teacher View Student Modal -->
     <div id="teacherViewModal" class="modal-overlay hidden">
-        <!-- Teacher View Modal Content -->
+        <div class="glass w-full max-w-4xl rounded-3xl border-2 border-blue-500 flex flex-col max-h-[90vh] overflow-hidden relative">
+            <div class="p-6 bg-slate-900 flex justify-between items-center border-b border-slate-800">
+                <h3 id="viewStudentTitle" class="text-2xl font-black text-white text-right">צפייה בתוצרי תלמיד</h3>
+                <button onclick="window.closeViewModal()" class="text-gray-500 hover:text-white text-2xl">✕</button>
+            </div>
+            <div class="p-8 overflow-y-auto space-y-6 flex-grow text-right">
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="bg-black/40 p-4 rounded-xl border border-slate-700">
+                        <h5 class="text-blue-400 font-bold mb-2">1. צוות ההפקה:</h5>
+                        <p id="viewCrew" class="text-white whitespace-pre-wrap text-sm italic"></p>
+                    </div>
+                    <div class="bg-black/40 p-4 rounded-xl border border-slate-700">
+                        <h5 class="text-blue-400 font-bold mb-2">2. תכנון לוקיישן:</h5>
+                        <p id="viewLoc" class="text-white whitespace-pre-wrap text-sm italic"></p>
+                    </div>
+                    <div class="bg-black/40 p-4 rounded-xl border border-slate-700">
+                        <h5 class="text-blue-400 font-bold mb-2">3. שאלות לראיון:</h5>
+                        <p id="viewQue" class="text-white whitespace-pre-wrap text-sm italic"></p>
+                    </div>
+                </div>
+                
+                <div class="pt-6 border-t border-slate-700">
+                    <label class="block text-blue-400 font-black mb-2 text-right">כתוב משוב לתלמיד:</label>
+                    <textarea id="teacherFeedbackInput" class="w-full bg-black/40 border border-slate-700 rounded-2xl p-4 text-white focus:border-blue-500 resize-none h-24 text-right" placeholder="כתוב כאן הערות, הארות ומשוב..."></textarea>
+                    <div class="mt-4 flex justify-between items-center">
+                        <button onclick="window.saveFeedback()" class="btn-secondary px-8 font-black">שמור משוב ושלח</button>
+                        <span id="feedbackSaveStatus" class="text-green-500 opacity-0 font-bold transition-opacity">המשוב נשמר!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="script.js"></script>
