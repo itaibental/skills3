@@ -3,40 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>פורטל תלמידים</title>
+    <title>מיומנויות - פורטל תלמידים</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="min-h-screen bg-[#0f172a] text-white">
+<body class="min-h-screen bg-[#0f172a] text-white font-['Assistant']">
 
-    <!-- Login Section -->
+    <!-- Login Area -->
     <div id="studentLoginArea" class="h-screen flex items-center justify-center p-6">
-        <div class="glass p-10 rounded-3xl w-full max-w-md border-2 border-orange-500 text-right shadow-2xl">
+        <div class="glass p-10 rounded-[2.5rem] w-full max-w-md border-2 border-orange-500 shadow-2xl text-right">
             <div class="text-center mb-8">
                 <div class="text-6xl mb-4">🎓</div>
-                <h2 class="text-3xl font-black text-orange-500">אימות תלמיד</h2>
+                <h2 class="text-3xl font-black text-orange-500 italic">אימות תלמיד</h2>
+                <p class="text-gray-400 mt-2">הזן תעודת זהות כדי להתחיל במשימות</p>
             </div>
-            <div class="space-y-4">
-                <label class="text-sm text-gray-400 block">הזן מספר תעודת זהות:</label>
-                <input type="text" id="studentTZ" class="w-full bg-black/40 border border-slate-700 rounded-xl p-4 text-white text-center text-xl outline-none focus:border-orange-500 transition-colors" placeholder="000000000">
-                <button onclick="window.loginStudent()" class="btn-primary w-full py-4 text-lg font-black">כניסה למרחב הלמידה</button>
-                <a href="index.html" class="block text-center text-gray-500 text-sm underline mt-4">חזרה לדף הבית</a>
+            <div class="space-y-5">
+                <input type="text" id="studentTZ" class="w-full bg-black/40 border border-slate-700 rounded-2xl p-4 text-white text-center text-2xl outline-none focus:border-orange-500 transition-all" placeholder="000000000">
+                <button id="doStudentLogin" class="btn-primary w-full py-4 text-lg font-black shadow-lg shadow-orange-900/20">כניסה למרחב הלמידה</button>
+                <a href="index.html" class="block text-center text-gray-500 text-sm underline">ביטול וחזרה לדף הבית</a>
             </div>
         </div>
     </div>
 
-    <!-- Workspace Section (Hidden) -->
-    <div id="studentWorkspace" class="hidden min-h-screen flex flex-col">
-        <header class="p-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex justify-between items-center sticky top-0 z-50">
-            <h1 id="welcomeStudent" class="text-2xl font-black text-white">שלום, תלמיד</h1>
-            <button onclick="location.reload()" class="bg-slate-800 hover:bg-red-900/50 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all">התנתק</button>
+    <!-- Workspace -->
+    <div id="studentWorkspace" class="hidden min-h-screen flex flex-col animate-fade-in">
+        <header class="p-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex justify-between items-center sticky top-0 z-50 shadow-2xl">
+            <div class="text-right">
+                <h1 id="welcomeStudent" class="text-2xl font-black text-white italic">שלום</h1>
+                <p class="text-blue-400 text-xs font-bold uppercase tracking-wider">מרחב עבודה פעיל</p>
+            </div>
+            <button onclick="location.reload()" class="bg-slate-800 hover:bg-red-900/40 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all border border-slate-700">התנתק</button>
         </header>
         
         <main class="p-8 md:p-12 max-w-5xl mx-auto w-full text-right">
-            <h3 class="text-2xl font-black mb-8 text-orange-500 border-r-4 border-orange-500 pr-4">המטלות שלי:</h3>
+            <h3 class="text-2xl font-black mb-8 text-orange-500 border-r-4 border-orange-500 pr-4">המטלות הדיגיטליות שלי:</h3>
             <div id="studentTaskList" class="grid md:grid-cols-2 gap-6">
-                <!-- יאוכלס ע"י השרת -->
+                <!-- יאוכלס ע"י script.js -->
             </div>
         </main>
     </div>
