@@ -3,350 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת מיומנויות - ניהול מתקדם</title>
-    
-    <!-- External Libraries -->
+    <title>מערכת מיומנויות - דף הבית</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    <style>
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: #0f172a;
-            color: #f3f4f6;
-            scroll-behavior: smooth;
-        }
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .btn-primary {
-            background: #f97316;
-            color: #000;
-            font-weight: 800;
-            border-radius: 0.75rem;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(249, 115, 22, 0.4);
-        }
-        .hidden-section { display: none; }
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="min-h-screen flex flex-col text-right">
+<body class="min-h-screen bg-[#0f172a] text-white flex flex-col items-center justify-center p-6 text-center">
 
-    <!-- Landing Screen -->
-    <div id="landingScreen" class="h-screen flex flex-col items-center justify-center p-6 text-center">
-        <h1 class="text-6xl font-black mb-4 text-white">מערכת <span class="text-orange-500">מיומנויות</span></h1>
-        <p class="text-xl text-blue-300 mb-12">פורטל ניהול ולמידה משולב</p>
-        
-        <div class="grid md:grid-cols-2 gap-8 w-full max-w-2xl">
-            <!-- כפתור תלמיד מפנה לדף student.html (יש ליצור אותו בנפרד ב-GitHub) -->
-            <div onclick="window.location.href='student.html'" class="glass p-10 rounded-3xl cursor-pointer hover:border-orange-500 border-2 border-transparent transition group">
-                <div class="text-6xl mb-4 group-hover:scale-110 transition">🎓</div>
-                <h2 class="text-2xl font-bold">כניסת תלמיד</h2>
-                <p class="text-gray-400 text-sm mt-2">ביצוע משימות וצפייה במשוב</p>
-            </div>
-            <div onclick="window.openLoginModal('teacher')" class="glass p-10 rounded-3xl cursor-pointer hover:border-blue-500 border-2 border-transparent transition group">
-                <div class="text-6xl mb-4 group-hover:scale-110 transition">🔑</div>
-                <h2 class="text-2xl font-bold">כניסת מורה</h2>
-                <p class="text-gray-400 text-sm mt-2">ניהול כיתות וייבוא נתונים</p>
-            </div>
-        </div>
-    </div>
+    <header class="mb-16">
+        <h1 class="text-7xl font-black mb-4 italic tracking-tight">מערכת <span class="text-orange-500">מיומנויות</span></h1>
+        <p class="text-2xl text-blue-300 font-light">פורטל ניהול ולמידה משולב</p>
+    </header>
 
-    <!-- Teacher Login Modal -->
-    <div id="teacherLoginModal" class="modal-overlay hidden">
-        <div class="glass p-8 rounded-3xl w-full max-w-md relative text-right">
-            <button onclick="window.closeLoginModals()" class="absolute top-4 left-4 text-gray-400 hover:text-white">✕</button>
-            
-            <div id="teacherGate" class="space-y-4">
-                <h2 class="text-2xl font-black text-blue-500 mb-6 text-center">אימות צוות</h2>
-                <input type="password" id="globalTeacherPass" class="w-full bg-black/40 border border-slate-700 rounded-xl p-4 text-white text-center" placeholder="סיסמת צוות (1234)">
-                <button onclick="window.checkTeacherGate()" class="btn-primary w-full py-3">המשך</button>
-            </div>
+    <main class="grid md:grid-cols-3 gap-8 w-full max-w-5xl">
+        <!-- Student Portal Link -->
+        <a href="student.html" class="glass p-10 rounded-[2.5rem] border-2 border-transparent hover:border-orange-500 transition-all duration-300 group">
+            <div class="text-6xl mb-6 group-hover:scale-110 transition-transform">🎓</div>
+            <h2 class="text-2xl font-bold mb-2">פורטל תלמיד</h2>
+            <p class="text-gray-400 text-sm">כניסה לביצוע מטלות וצפייה במשוב</p>
+        </a>
 
-            <div id="teacherAuthFields" class="hidden space-y-4">
-                <div class="flex border-b border-slate-700 mb-4">
-                    <button id="tabLogin" onclick="window.switchTeacherMode('login')" class="flex-1 py-2 text-white border-b-2 border-blue-500">כניסה</button>
-                    <button id="tabSignup" onclick="window.switchTeacherMode('signup')" class="flex-1 py-2 text-gray-500 transition">רישום חדש</button>
-                </div>
-                
-                <input type="text" id="teacherUser" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="שם בית ספר">
-                
-                <div id="teacherLoginSelectContainer" class="hidden">
-                    <label class="text-xs text-blue-400 block mb-1">בחר מורה:</label>
-                    <select id="teacherIndexSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-right"></select>
-                </div>
+        <!-- Teacher Portal Link -->
+        <a href="teacher.html" class="glass p-10 rounded-[2.5rem] border-2 border-transparent hover:border-blue-500 transition-all duration-300 group">
+            <div class="text-6xl mb-6 group-hover:scale-110 transition-transform">🔑</div>
+            <h2 class="text-2xl font-bold mb-2">פורטל מורה</h2>
+            <p class="text-gray-400 text-sm">ניהול כיתות, ייבוא תלמידים ומשוב</p>
+        </a>
 
-                <div class="relative">
-                    <input type="password" id="teacherPass" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="סיסמת ניהול">
-                    <button onclick="window.togglePass('teacherPass')" class="absolute left-3 top-1/2 -translate-y-1/2">👁️</button>
-                </div>
-                
-                <div id="newTeacherFields" class="hidden space-y-3">
-                    <input type="text" id="deptHead" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right" placeholder="שם רכז">
-                    <textarea id="teacherNamesInput" class="w-full bg-black/40 border border-slate-700 rounded-xl p-3 text-white text-right h-20 text-xs" placeholder="שמות מורים (אחד בשורה)"></textarea>
-                </div>
-                <button onclick="window.loginTeacher()" class="btn-primary w-full py-3">התחבר למערכת</button>
-            </div>
-        </div>
-    </div>
+        <!-- Admin Portal Link -->
+        <a href="admin.html" class="glass p-10 rounded-[2.5rem] border-2 border-transparent hover:border-red-500 transition-all duration-300 group">
+            <div class="text-6xl mb-6 group-hover:scale-110 transition-transform">🛠️</div>
+            <h2 class="text-2xl font-bold mb-2">ניהול מערכת</h2>
+            <p class="text-gray-400 text-sm">העלאת מטלות HTML/PDF וניהול תוכן</p>
+        </a>
+    </main>
 
-    <!-- Teacher Dashboard -->
-    <div id="teacherDashboard" class="hidden-section p-8">
-        <header class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-6 mb-8 gap-4">
-            <div class="flex items-center gap-4">
-                <h1 class="text-4xl font-black text-blue-500">ניהול סביבה</h1>
-                <div class="bg-slate-800 p-2 rounded-2xl border border-slate-700">
-                    <label class="text-[10px] text-gray-500 block">שליטה בסביבת:</label>
-                    <select id="dashboardTeacherSwitcher" onchange="window.switchAutonomousTeacher()" class="bg-transparent text-white font-bold outline-none text-sm"></select>
-                </div>
-            </div>
-            <div class="text-left">
-                <p id="teacherProfileInfo" class="text-gray-400 text-sm font-bold"></p>
-                <button onclick="location.reload()" class="text-xs text-red-500 underline">התנתק</button>
-            </div>
-        </header>
+    <footer class="mt-20 text-gray-500 text-sm font-medium">
+        &copy; 2024 מערכת תרגול מיומנויות דיגיטליות
+    </footer>
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-4 gap-8">
-            <!-- Sidebar -->
-            <div class="lg:col-span-1 space-y-6">
-                <div class="glass p-6 rounded-3xl border-orange-500/30 border">
-                    <h3 class="font-bold mb-4 text-white">הוספה ידנית</h3>
-                    <input type="text" id="manualStudentName" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm" placeholder="שם תלמיד">
-                    <input type="text" id="manualStudentTZ" class="w-full bg-slate-800 p-2 rounded mb-4 text-sm" placeholder="תעודת זהות">
-                    <button onclick="window.addManualStudent()" class="btn-primary w-full py-2 text-xs">הוסף +</button>
-                </div>
-
-                <div class="glass p-6 rounded-3xl border-green-500/30 border">
-                    <h3 class="font-bold mb-4 text-white">ייבוא נתונים</h3>
-                    <input type="text" id="gsheetsUrl" class="w-full bg-slate-800 p-2 rounded mb-2 text-[10px]" placeholder="קישור Google Sheets">
-                    <button onclick="window.importFromGoogleSheets()" class="w-full bg-green-600 py-2 rounded-xl text-xs font-bold mb-4">ייבוא מ-Sheets</button>
-                    <input type="file" id="excelInput" class="hidden" accept=".xlsx,.csv">
-                    <button onclick="document.getElementById('excelInput').click()" class="w-full bg-slate-700 py-2 rounded-xl text-xs font-bold">ייבוא מקובץ אקסל</button>
-                </div>
-
-                <div class="glass p-6 rounded-3xl border-blue-500/30 border">
-                    <h3 class="font-bold mb-4 text-white">ניהול כיתות</h3>
-                    <select id="activeClassSelector" onchange="window.loadTeacherRoster()" class="w-full bg-slate-800 p-2 rounded mb-4 text-sm"></select>
-                    <div class="flex gap-2">
-                        <input type="text" id="newClassNameInput" class="flex-grow bg-slate-800 p-2 rounded text-xs" placeholder="שם כיתה">
-                        <button onclick="window.addNewClass()" class="bg-blue-600 px-3 rounded">+</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="lg:col-span-3 glass p-6 rounded-3xl min-h-[500px]">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold">רשימת תלמידים</h3>
-                    <span id="rosterCount" class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full font-mono font-bold">0</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right text-sm">
-                        <thead class="bg-slate-800">
-                            <tr>
-                                <th class="p-4 border-b border-slate-700">שם</th>
-                                <th class="p-4 border-b border-slate-700">ת"ז</th>
-                                <th class="p-4 border-b border-slate-700">כיתה</th>
-                                <th class="p-4 border-b border-slate-700 text-center">פעולות</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rosterTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts Integration -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCte4D5lS6eHAZbNvcKHY0I07yr2llh-HI",
-            authDomain: "webpages-4aacb.firebaseapp.com",
-            projectId: "webpages-4aacb",
-            storageBucket: "webpages-4aacb.firebasestorage.app",
-            messagingSenderId: "421209892208",
-            appId: "1:421209892208:web:53e3ac2d7976975f579bb5"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'skills-practice-v2';
-
-        let isAuthReady = false;
-        let activeSchoolId = null;
-        let activeTeacherName = "";
-        let teacherMode = 'login';
-        let myClasses = [];
-
-        const getSafeId = (str) => str ? Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('') : "";
-
-        // --- Window Binding for HTML Actions ---
-        
-        window.openLoginModal = (type) => {
-            document.getElementById('teacherLoginModal').classList.remove('hidden');
-        };
-
-        window.closeLoginModals = () => {
-            document.getElementById('teacherLoginModal').classList.add('hidden');
-        };
-
-        window.checkTeacherGate = () => {
-            if (document.getElementById('globalTeacherPass').value === "1234") {
-                document.getElementById('teacherGate').classList.add('hidden');
-                document.getElementById('teacherAuthFields').classList.remove('hidden');
-                window.initLoginListeners();
-            }
-        };
-
-        window.switchTeacherMode = (mode) => {
-            teacherMode = mode;
-            document.getElementById('newTeacherFields').classList.toggle('hidden', mode === 'login');
-            document.getElementById('tabLogin').classList.toggle('border-blue-500', mode === 'login');
-            document.getElementById('tabSignup').classList.toggle('border-blue-500', mode === 'signup');
-        };
-
-        window.initLoginListeners = () => {
-            const input = document.getElementById('teacherUser');
-            input.onblur = async () => {
-                if (teacherMode !== 'login') return;
-                const schoolId = getSafeId(input.value.trim());
-                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId));
-                if (snap.exists()) {
-                    const names = snap.data().teacherNames || [];
-                    const select = document.getElementById('teacherIndexSelect');
-                    select.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
-                    document.getElementById('teacherLoginSelectContainer').classList.remove('hidden');
-                }
-            };
-        };
-
-        window.loginTeacher = async () => {
-            const schoolName = document.getElementById('teacherUser').value.trim();
-            const pass = document.getElementById('teacherPass').value;
-            const schoolId = getSafeId(schoolName);
-            const schoolRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId);
-
-            try {
-                const snap = await getDoc(schoolRef);
-                if (teacherMode === 'login') {
-                    if (!snap.exists() || snap.data().password !== pass) return alert("פרטים שגויים");
-                    activeTeacherName = document.getElementById('teacherIndexSelect').value;
-                } else {
-                    const names = document.getElementById('teacherNamesInput').value.split('\n').filter(n => n.trim());
-                    const dept = document.getElementById('deptHead').value.trim();
-                    await setDoc(schoolRef, { schoolName, password: pass, departmentHead: dept, teacherNames: names });
-                    activeTeacherName = names[0];
-                }
-                activeSchoolId = schoolId;
-                window.initTeacherEnvironment();
-                window.closeLoginModals();
-                document.getElementById('landingScreen').classList.add('hidden-section');
-                document.getElementById('teacherDashboard').classList.remove('hidden-section');
-            } catch (e) { alert("שגיאת חיבור"); }
-        };
-
-        window.initTeacherEnvironment = async () => {
-            const tKey = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
-            const tRef = doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', tKey);
-            const tSnap = await getDoc(tRef);
-            myClasses = tSnap.exists() ? tSnap.data().classes || [] : [];
-            
-            const schoolSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', activeSchoolId));
-            const allTeachers = schoolSnap.data().teacherNames || [];
-            
-            const switcher = document.getElementById('dashboardTeacherSwitcher');
-            switcher.innerHTML = allTeachers.map(n => `<option value="${n}" ${n===activeTeacherName?'selected':''}>${n}</option>`).join('');
-            
-            document.getElementById('teacherProfileInfo').innerText = `${activeTeacherName} | רכז: ${schoolSnap.data().departmentHead}`;
-            window.updateClassUI();
-            window.loadTeacherRoster();
-        };
-
-        window.switchAutonomousTeacher = () => {
-            activeTeacherName = document.getElementById('dashboardTeacherSwitcher').value;
-            window.initTeacherEnvironment();
-        };
-
-        window.loadTeacherRoster = async () => {
-            const table = document.getElementById('rosterTableBody');
-            const selClass = document.getElementById('activeClassSelector').value;
-            const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
-            
-            table.innerHTML = '<tr><td colspan="4" class="text-center p-4">טוען...</td></tr>';
-            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'access_list'));
-            table.innerHTML = '';
-            let count = 0;
-            
-            snap.forEach(d => {
-                const data = d.data();
-                if (data.teacherScopeId === tScope && (selClass === 'all' || data.className === selClass)) {
-                    count++;
-                    table.innerHTML += `<tr class="border-b border-slate-800">
-                        <td class="p-4">${data.studentName}</td>
-                        <td class="p-4 font-mono">${data.tz}</td>
-                        <td class="p-4 text-blue-400 font-bold">${data.className}</td>
-                        <td class="p-4 text-center">
-                            <button onclick="window.deleteStudent('${data.tz}')" class="text-red-500">🗑️</button>
-                        </td>
-                    </tr>`;
-                }
-            });
-            document.getElementById('rosterCount').innerText = count;
-        };
-
-        window.addManualStudent = async () => {
-            const name = document.getElementById('manualStudentName').value;
-            const tz = document.getElementById('manualStudentTZ').value;
-            const className = document.getElementById('activeClassSelector').value;
-            if(!name || !tz || className === 'all') return alert("מלא פרטים ובחר כיתה");
-            
-            const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz), {
-                studentName: name, tz, className, teacherScopeId: tScope
-            });
-            window.loadTeacherRoster();
-        };
-
-        window.addNewClass = async () => {
-            const name = document.getElementById('newClassNameInput').value.trim();
-            if(!name || myClasses.includes(name)) return;
-            myClasses.push(name);
-            const tKey = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', tKey), { classes: myClasses }, { merge: true });
-            window.updateClassUI();
-        };
-
-        window.updateClassUI = () => {
-            const s = document.getElementById('activeClassSelector');
-            s.innerHTML = '<option value="all">כל התלמידים</option>' + myClasses.map(c => `<option value="${c}">${c}</option>`).join('');
-        };
-
-        window.togglePass = (id) => { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; };
-
-        onAuthStateChanged(auth, (u) => isAuthReady = !!u);
-        signInAnonymously(auth);
-    </script>
 </body>
 </html>
