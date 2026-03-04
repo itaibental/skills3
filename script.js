@@ -1,11 +1,12 @@
 /**
- * Skills Practice - Project Logic v4.0
- * Fixed: Explicit window binding for GitHub Pages compatibility
+ * Skills Practice - Project Logic v4.1
+ * Shared logic for Admin, Teacher, and Student portals.
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -20,73 +21,97 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const appId = 'skills-practice-v2';
 
 // --- State ---
 let isAuthReady = false;
 let activeSchoolId = null;
 let activeTeacherName = "";
-let activeTZ = null;
 let teacherMode = 'login';
 let myClasses = [];
 
 // --- Helpers ---
 const getSafeId = (str) => str ? Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('') : "";
 
-const showMsg = (txt, isError = false) => {
-    const t = document.createElement('div');
-    t.className = `fixed top-8 left-1/2 -translate-x-1/2 ${isError ? 'bg-red-600' : 'bg-blue-600'} text-white px-8 py-4 rounded-xl z-[999] font-bold shadow-2xl transition-all text-center border-2 border-white/20`;
-    t.innerText = txt;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 4000);
+// --- Shared Window Functions ---
+window.togglePass = (id) => { const el = document.getElementById(id); if(el) el.type = el.type === 'password' ? 'text' : 'password'; };
+
+// --- Admin Logic ---
+window.loginAdmin = () => {
+    if (document.getElementById('adminPassInput').value === "1234") {
+        document.getElementById('adminAuthArea').classList.add('hidden');
+        document.getElementById('adminDashboard').classList.remove('hidden');
+        window.loadAdminTasks();
+    } else alert("סיסמה שגויה");
 };
 
-// --- Shared Window Functions (Fixed Binding) ---
+window.adminAddTask = async () => {
+    const title = document.getElementById('taskTitleInput').value.trim();
+    const icon = document.getElementById('taskIconInput').value.trim();
+    const fileInput = document.getElementById('taskFileObject');
+    const driveUrl = document.getElementById('taskDriveUrl').value.trim();
+    const loader = document.getElementById('uploadLoader');
 
-window.openLoginModal = (type) => {
-    if (type === 'student') {
-        // Redirect to student page if on index.html
-        if (!window.location.href.includes('student.html')) {
-            window.location.href = 'student.html';
+    if (!title) return alert("הזן שם למטלה");
+    if (loader) loader.classList.remove('hidden');
+    
+    let fileUrl = ""; let type = "link";
+
+    try {
+        if (fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const storageRef = ref(storage, `artifacts/${appId}/tasks/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            fileUrl = await getDownloadURL(snapshot.ref);
+            type = file.name.endsWith('.pdf') ? "pdf" : "html";
+        } else if (driveUrl) {
+            fileUrl = driveUrl; type = "drive";
+        } else {
+            alert("בחר קובץ או קישור Drive"); if(loader) loader.classList.add('hidden'); return;
         }
-    } else {
-        const modal = document.getElementById('teacherLoginModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            document.getElementById('teacherGate').classList.remove('hidden');
-            document.getElementById('teacherAuthFields').classList.add('hidden');
-        }
-    }
+
+        const taskId = getSafeId(title);
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId), {
+            title, fileUrl, type, icon: icon || '📄', createdAt: new Date().toISOString()
+        });
+        alert("המטלה נוספה בהצלחה!");
+        location.reload();
+    } catch (e) { alert("שגיאה: " + e.message); }
+    finally { if(loader) loader.classList.add('hidden'); }
 };
 
-window.closeLoginModals = () => {
-    const tModal = document.getElementById('teacherLoginModal');
-    if (tModal) tModal.classList.add('hidden');
+window.loadAdminTasks = () => {
+    onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snap) => {
+        const list = document.getElementById('adminTaskList');
+        if(!list) return; list.innerHTML = '';
+        snap.forEach(d => {
+            const task = d.data();
+            list.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl flex justify-between items-center border border-slate-700">
+                <span class="text-sm">${task.icon} ${task.title} <small class="text-gray-500">(${task.type})</small></span>
+                <button onclick="window.adminDeleteTask('${d.id}')" class="text-red-500 text-xs font-bold hover:underline">מחק 🗑️</button>
+            </div>`;
+        });
+    });
 };
 
-window.togglePass = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.type = el.type === 'password' ? 'text' : 'password';
-};
+window.adminDeleteTask = async (id) => { if(confirm("למחוק מטלה זו?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id)); };
 
 // --- Teacher Logic ---
-
 window.checkTeacherGate = () => {
-    const pass = document.getElementById('globalTeacherPass').value;
-    if (pass === "1234") {
+    if (document.getElementById('globalTeacherPass').value === "1234") {
         document.getElementById('teacherGate').classList.add('hidden');
         document.getElementById('teacherAuthFields').classList.remove('hidden');
         window.initTeacherAuthListeners();
-    } else showMsg("סיסמת גישה שגויה", true);
+    } else alert("סיסמה שגויה");
 };
 
 window.initTeacherAuthListeners = () => {
-    const schoolInput = document.getElementById('teacherUser');
-    if (!schoolInput) return;
-    schoolInput.onblur = async () => {
+    const input = document.getElementById('teacherUser');
+    input.onblur = async () => {
         if (teacherMode !== 'login') return;
-        const schoolId = getSafeId(schoolInput.value.trim());
-        if (!schoolId) return;
+        const schoolId = getSafeId(input.value.trim());
+        if(!schoolId) return;
         const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'school_profiles', schoolId));
         if (snap.exists()) {
             const names = snap.data().teacherNames || [];
@@ -99,21 +124,9 @@ window.initTeacherAuthListeners = () => {
 
 window.switchTeacherMode = (mode) => {
     teacherMode = mode;
-    const tabLogin = document.getElementById('tabLogin');
-    const tabSignup = document.getElementById('tabSignup');
-    const newFields = document.getElementById('newTeacherFields');
-    const loginSelection = document.getElementById('teacherLoginSelectContainer');
-
-    if (mode === 'login') {
-        tabLogin.className = "flex-1 py-3 text-white font-bold border-b-2 border-blue-500 transition";
-        tabSignup.className = "flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition";
-        newFields.classList.add('hidden');
-    } else {
-        tabSignup.className = "flex-1 py-3 text-white font-bold border-b-2 border-blue-500 transition";
-        tabLogin.className = "flex-1 py-3 text-gray-500 font-bold border-b-2 border-transparent transition";
-        newFields.classList.remove('hidden');
-        if (loginSelection) loginSelection.classList.add('hidden');
-    }
+    document.getElementById('newTeacherFields').classList.toggle('hidden', mode === 'login');
+    document.getElementById('tabLogin').classList.toggle('border-blue-500', mode === 'login');
+    document.getElementById('tabSignup').classList.toggle('border-blue-500', mode === 'signup');
 };
 
 window.loginTeacher = async () => {
@@ -125,93 +138,114 @@ window.loginTeacher = async () => {
     try {
         const snap = await getDoc(schoolRef);
         if (teacherMode === 'login') {
-            if (!snap.exists() || snap.data().password !== pass) return showMsg("פרטי גישה שגויים", true);
+            if (!snap.exists() || snap.data().password !== pass) return alert("פרטי גישה שגויים");
             activeTeacherName = document.getElementById('teacherIndexSelect').value;
         } else {
-            const names = document.getElementById('teacherNamesInput').value.split('\n').map(n => n.trim()).filter(n => n);
+            const names = document.getElementById('teacherNamesInput').value.split('\n').filter(n => n.trim());
             const dept = document.getElementById('deptHead').value.trim();
-            if (!dept || names.length === 0) return showMsg("מלא שדות חובה", true);
+            if(!dept || names.length === 0) return alert("מלא שדות חובה");
             await setDoc(schoolRef, { schoolName, password: pass, departmentHead: dept, teacherNames: names });
             activeTeacherName = names[0];
         }
         activeSchoolId = schoolId;
-        window.closeLoginModals();
-        window.initTeacherDashboard(schoolName);
-    } catch (e) { showMsg("שגיאת חיבור", true); }
+        const schoolData = (await getDoc(schoolRef)).data();
+        document.getElementById('teacherAuthArea').classList.add('hidden');
+        document.getElementById('teacherDashboard').classList.remove('hidden');
+        window.initTeacherDashboard(schoolName, schoolData);
+    } catch (e) { alert("שגיאת חיבור"); }
 };
 
-window.initTeacherDashboard = async (schoolName) => {
+window.initTeacherDashboard = async (schoolName, schoolData) => {
     const tKey = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
     const tRef = doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', tKey);
     const tSnap = await getDoc(tRef);
     myClasses = tSnap.exists() ? tSnap.data().classes || [] : [];
     
-    document.getElementById('teacherProfileInfo').innerText = `${schoolName} | מורה: ${activeTeacherName}`;
-    document.getElementById('landingScreen').classList.add('hidden-section');
-    document.getElementById('teacherDashboard').classList.remove('hidden-section');
+    const switcher = document.getElementById('dashboardTeacherSwitcher');
+    switcher.innerHTML = (schoolData.teacherNames || []).map(n => `<option value="${n}" ${n===activeTeacherName?'selected':''}>${n}</option>`).join('');
     
+    document.getElementById('teacherProfileInfo').innerText = `${schoolName} | רכז: ${schoolData.departmentHead}`;
     window.updateClassUI();
     window.loadTeacherRoster();
 };
 
-window.updateClassUI = () => {
-    const s = document.getElementById('activeClassSelector');
-    if (s) {
-        s.innerHTML = '<option value="all">כל התלמידים שלי</option>' + 
-                      myClasses.map(c => `<option value="${c}">${c}</option>`).join('');
-    }
+window.switchAutonomousTeacher = () => {
+    activeTeacherName = document.getElementById('dashboardTeacherSwitcher').value;
+    window.loginTeacher(); // Re-init environment
 };
 
 window.loadTeacherRoster = async () => {
     const table = document.getElementById('rosterTableBody');
-    if (!table) return;
-    const selectedClass = document.getElementById('activeClassSelector').value;
+    const selClass = document.getElementById('activeClassSelector').value;
     const tScope = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
-    
-    table.innerHTML = '<tr><td colspan="5" class="p-4 text-center">טוען רשימה...</td></tr>';
     const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'access_list'));
     table.innerHTML = '';
-    
     snap.forEach(d => {
         const data = d.data();
-        if (data.teacherScopeId === tScope && (selectedClass === 'all' || data.className === selectedClass)) {
-            table.innerHTML += `<tr class="border-b border-slate-800">
-                <td class="p-4">${data.studentName}</td>
-                <td class="p-4 font-mono">${data.tz}</td>
-                <td class="p-4 text-blue-400">${data.className}</td>
-                <td class="p-4 text-center"><button onclick="window.viewStudentWork('${data.tz}')" class="text-blue-500 underline">צפה</button></td>
-                <td class="p-4 text-center"><button onclick="window.deleteStudent('${data.tz}')" class="text-red-500">🗑️</button></td>
-            </tr>`;
+        if (data.teacherScopeId === tScope && (selClass === 'all' || data.className === selClass)) {
+            table.innerHTML += `<tr class="border-b border-slate-800"><td class="p-4">${data.studentName}</td><td class="p-4 font-mono">${data.tz}</td><td class="p-4 text-center"><button onclick="window.deleteStudent('${data.tz}')" class="text-red-500 hover:underline">מחק 🗑️</button></td></tr>`;
         }
     });
 };
 
-// --- Student Logic ---
+window.addManualStudent = async () => {
+    const name = document.getElementById('manualStudentName').value;
+    const tz = document.getElementById('manualStudentTZ').value;
+    const className = document.getElementById('activeClassSelector').value;
+    if(!name || !tz || className === 'all') return alert("בחר כיתה והזן פרטים");
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz), {
+        studentName: name, tz, className, teacherScopeId: `${activeSchoolId}_${getSafeId(activeTeacherName)}`
+    });
+    window.loadTeacherRoster();
+};
 
+window.addNewClass = async () => {
+    const name = document.getElementById('newClassNameInput').value.trim();
+    if(!name || myClasses.includes(name)) return;
+    myClasses.push(name);
+    const tKey = `${activeSchoolId}_${getSafeId(activeTeacherName)}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'teacher_private_data', tKey), { classes: myClasses }, { merge: true });
+    window.updateClassUI();
+};
+
+window.updateClassUI = () => {
+    const s = document.getElementById('activeClassSelector');
+    if(s) s.innerHTML = '<option value="all">כל התלמידים</option>' + myClasses.map(c => `<option value="${c}">${c}</option>`).join('');
+};
+
+window.deleteStudent = async (tz) => { if(confirm("למחוק?")) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz)); window.loadTeacherRoster(); } };
+
+// --- Student Logic ---
 window.loginStudent = async () => {
     const tz = document.getElementById('studentTZ').value.trim();
-    if (!tz) return showMsg("הזן תעודת זהות", true);
-    
-    try {
-        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz));
-        if (snap.exists()) {
-            const data = snap.data();
-            activeTZ = tz;
-            document.getElementById('studentLoginArea').classList.add('hidden');
-            document.getElementById('studentWorkspace').classList.remove('hidden');
-            document.getElementById('welcomeStudent').innerText = `שלום, ${data.studentName}`;
-            document.getElementById('studentClassInfo').innerText = `כיתה: ${data.className}`;
-            // Here you would call fetchGitHubTasks()
-        } else showMsg("תעודת זהות לא קיימת", true);
-    } catch (e) { showMsg("שגיאת אימות", true); }
+    if(!tz) return alert("הזן תעודת זהות");
+    const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'access_list', tz));
+    if (snap.exists()) {
+        document.getElementById('welcomeStudent').innerText = `שלום, ${snap.data().studentName}`;
+        document.getElementById('studentLoginArea').classList.add('hidden');
+        document.getElementById('studentWorkspace').classList.remove('hidden');
+        window.loadStudentTasks();
+    } else alert("תעודת זהות לא רשומה");
+};
+
+window.loadStudentTasks = () => {
+    onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snap) => {
+        const list = document.getElementById('studentTaskList');
+        if(!list) return; list.innerHTML = '';
+        snap.forEach(d => {
+            const task = d.data();
+            list.innerHTML += `
+                <div onclick="window.open( '${task.fileUrl}', '_blank')" class="glass p-6 rounded-2xl flex justify-between items-center cursor-pointer border-2 border-transparent hover:border-orange-500 transition shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">${task.icon}</span>
+                        <span class="text-lg font-bold">${task.title}</span>
+                    </div>
+                    <span class="bg-orange-500 text-black px-6 py-2 rounded-xl text-xs font-black uppercase">${task.type === 'pdf' || task.type === 'drive' ? 'פתח' : 'בצע'}</span>
+                </div>`;
+        });
+    });
 };
 
 // --- Initialization ---
-onAuthStateChanged(auth, (user) => {
-    isAuthReady = !!user;
-    console.log("Firebase Auth Ready:", isAuthReady);
-});
-
-(async () => {
-    try { await signInAnonymously(auth); } catch (e) { console.error(e); }
-})();
+onAuthStateChanged(auth, (u) => isAuthReady = !!u);
+signInAnonymously(auth);
