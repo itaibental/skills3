@@ -3,80 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ניהול מנהל - מיומנויות</title>
+    <title>מיומנויות - ניהול מנהל</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen bg-[#0f172a] text-white font-['Assistant']">
 
-    <!-- Login Area -->
+    <!-- Admin Auth Gate -->
     <div id="adminAuthArea" class="h-screen flex items-center justify-center p-6 text-right">
         <div class="glass p-10 rounded-[2.5rem] w-full max-w-md border-2 border-red-500 shadow-2xl">
             <div class="text-center mb-8">
-                <div class="text-6xl mb-4">🛠️</div>
-                <h2 class="text-3xl font-black text-red-500">ניהול מנהל</h2>
-                <p class="text-gray-400 mt-2">גישה מוגבלת למורשי מערכת בלבד</p>
+                <div class="text-6xl mb-4 animate-pulse">🛠️</div>
+                <h2 class="text-4xl font-black text-red-500 uppercase tracking-tighter italic">Admin Portal</h2>
+                <p class="text-gray-400 mt-2 font-medium">ניהול תוכן וסנכרון מטלות חיצוניות</p>
             </div>
-            <div class="space-y-4">
-                <input type="password" id="adminPassInput" class="w-full bg-black/40 border border-slate-700 rounded-2xl p-4 text-white text-center text-xl outline-none focus:border-red-500" placeholder="סיסמת מנהל">
-                <button onclick="window.loginAdmin()" class="bg-red-600 hover:bg-red-500 text-white w-full py-4 rounded-xl font-black shadow-lg shadow-red-900/20 transition-all">כניסה ללוח הניהול</button>
-                <a href="index.html" class="block text-center text-gray-500 text-xs underline mt-4">חזרה לדף הבית</a>
+            <div class="space-y-5">
+                <input type="password" id="adminPassInput" class="w-full bg-black/40 border border-slate-700 rounded-2xl p-4 text-white text-center text-xl outline-none focus:border-red-500 transition-all" placeholder="סיסמת מנהל">
+                <button id="doAdminLogin" class="bg-red-600 hover:bg-red-500 text-white w-full py-4 rounded-xl font-black shadow-lg shadow-red-900/20 transition-all active:scale-95">כניסה ללוח הניהול</button>
+                <a href="index.html" class="block text-center text-gray-500 text-xs underline mt-4 hover:text-white">חזרה לדף הבית</a>
             </div>
         </div>
     </div>
 
     <!-- Admin Dashboard -->
-    <div id="adminDashboard" class="hidden p-8 flex flex-col min-h-screen">
-        <header class="max-w-7xl mx-auto w-full flex justify-between items-center border-b border-red-900 pb-6 mb-8">
-            <h1 class="text-4xl font-black text-red-500 italic">ניהול מטלות ותוכן</h1>
-            <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all">יציאה בטוחה</button>
+    <div id="adminDashboard" class="hidden p-8 flex flex-col min-h-screen animate-fade-in">
+        <header class="max-w-7xl mx-auto w-full flex justify-between items-center border-b border-red-900 pb-6 mb-10 shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="bg-red-600 text-white p-2 rounded-xl text-xl shadow-lg">🛠️</div>
+                <h1 class="text-4xl font-black text-red-500 italic">ניהול מטלות ותוכן</h1>
+            </div>
+            <button onclick="location.reload()" class="bg-slate-800 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 transition-all border border-slate-700">יציאה בטוחה</button>
         </header>
 
-        <main class="max-w-7xl mx-auto w-full grid md:grid-cols-2 gap-10 text-right">
-            <!-- Left Side: Add Task -->
-            <div class="glass p-8 rounded-[2rem] border-red-500/20 border shadow-2xl h-fit">
-                <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-3">
-                    <span class="text-red-500 text-2xl">+</span> הוספת מטלה חדשה
-                </h3>
-                <div class="space-y-5">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 mb-2 mr-1">שם המטלה:</label>
-                        <input type="text" id="taskTitleInput" class="w-full bg-slate-900/50 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-red-500" placeholder="למשל: תרגול קומפוזיציה">
+        <main class="max-w-7xl mx-auto w-full grid md:grid-cols-2 gap-12 text-right">
+            <!-- GitHub Sync Card -->
+            <div class="glass p-10 rounded-[2.5rem] border-red-500/20 border shadow-2xl h-fit">
+                <h3 class="text-2xl font-black mb-8 text-white border-r-4 border-red-500 pr-4 italic">סנכרון תיקיית Skills ב-GitHub</h3>
+                <div class="space-y-6">
+                    <p class="text-xs text-gray-400 font-medium">הזן פרטי GitHub כדי למשוך קבצים מתיקיית ה-skills במאגר שלך:</p>
+                    <div class="space-y-4">
+                        <input type="text" id="ghUser" class="w-full bg-slate-900/50 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-blue-500 transition-all" placeholder="GitHub Username">
+                        <input type="text" id="ghRepo" class="w-full bg-slate-900/50 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-blue-500 transition-all" placeholder="Repository Name">
                     </div>
-                    
-                    <div class="bg-slate-900/50 p-5 rounded-xl border border-slate-700 space-y-4">
-                        <div>
-                            <label class="block text-xs text-blue-400 font-bold mb-2">1. העלאת קובץ (HTML / PDF):</label>
-                            <input type="file" id="taskFileObject" class="text-xs text-gray-400 w-full cursor-pointer" accept=".html,.pdf">
-                        </div>
-                        <div class="relative flex items-center py-2">
-                            <div class="flex-grow border-t border-slate-700"></div>
-                            <span class="flex-shrink mx-4 text-gray-600 text-[10px] font-bold">או</span>
-                            <div class="flex-grow border-t border-slate-700"></div>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-green-400 font-bold mb-2">2. קישור מ-Google Drive:</label>
-                            <input type="text" id="taskDriveUrl" class="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 text-xs text-white" placeholder="הדבק קישור Drive">
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 mb-2 mr-1">אייקון (Emoji):</label>
-                        <input type="text" id="taskIconInput" class="w-full bg-slate-900/50 p-4 rounded-xl border border-slate-700 text-white" placeholder="למשל: 📸">
-                    </div>
-                    
-                    <button id="addTaskBtn" onclick="window.adminAddTask()" class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-xl font-black flex justify-center items-center gap-3 transition-all active:scale-95">
-                        <span>הוסף מטלה למערכת</span>
-                        <div id="uploadLoader" class="loader hidden"></div>
+                    <button id="btnFetchGH" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black transition-all shadow-lg shadow-blue-900/20 active:scale-95 flex justify-center items-center gap-3">
+                        <span>טען קבצים מתיקיית skills</span>
+                        <span class="text-lg">🔄</span>
                     </button>
+                    
+                    <div id="ghFileList" class="space-y-2 mt-6 max-h-60 overflow-y-auto custom-scrollbar bg-black/20 p-2 rounded-xl">
+                        <!-- יאוכלס ע"י script.js -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Right Side: Current Tasks with Delete Button -->
-            <div class="glass p-8 rounded-[2rem] flex flex-col shadow-2xl min-h-[500px]">
-                <h3 class="text-xl font-bold mb-6 text-white border-b border-slate-700 pb-4">מטלות פעילות בשרת</h3>
-                <div id="adminTaskList" class="space-y-3 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
+            <!-- Active Tasks Card -->
+            <div class="glass p-10 rounded-[2.5rem] shadow-2xl border border-white/5">
+                <h3 class="text-2xl font-black mb-8 text-white border-r-4 border-slate-500 pr-4 italic text-right">מטלות פעילות בשרת</h3>
+                <div id="adminTaskList" class="space-y-4 overflow-y-auto max-h-[650px] pr-2 custom-scrollbar">
                     <!-- יאוכלס ע"י script.js -->
                 </div>
             </div>
